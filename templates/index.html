@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!-- ✅ Luxury Hero Section with responsive text -->
+{% if banner and banner.video %}
+  <div class="hero">
+    <video autoplay muted loop playsinline>
+      <source src="{{ url_for('static', filename='uploads/banners/' ~ banner.video) }}" type="video/mp4">
+    </video>
+    <div class="hero-content">
+      <h1 class="display-3 fw-bold mb-3">Bin Ahmed Parfüm</h1>
+      <p class="lead mb-4">Discover Your Signature Scent</p>
+      <a href="#products" class="btn btn-light px-4 py-2">Shop Now</a>
+    </div>
+  </div>
+{% elif banner and banner.filename %}
+  <div class="hero" style="background: url('{{ url_for('static', filename='uploads/banners/' ~ banner.filename) }}') center/cover no-repeat;">
+    <div class="hero-content">
+      <h1 class="display-3 fw-bold mb-3">Bin Ahmed Parfüm</h1>
+      <p class="lead mb-4">Discover Your Signature Scent</p>
+      <a href="#products" class="btn btn-light px-4 py-2">Shop Now</a>
+    </div>
+  </div>
+{% else %}
+  <div class="hero bg-dark">
+    <div class="hero-content">
+      <h1 class="display-3 fw-bold mb-3 text-white">Bin Ahmed Parfüm</h1>
+      <p class="lead mb-4 text-white-50">Discover Your Signature Scent</p>
+      <a href="#products" class="btn btn-light px-4 py-2">Shop Now</a>
+    </div>
+  </div>
+{% endif %}
+
+<style>
+  /* ✅ Limit hero content width and adjust spacing for all screens */
+  .hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .hero-content h1 {
+    font-size: 3rem;
+    line-height: 1.2;
+  }
+
+  .hero-content p {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-content a.btn {
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0.75rem 2rem;
+  }
+
+  /* ✅ Responsive adjustments */
+  @media (max-width: 992px) {
+    .hero-content h1 {
+      font-size: 2.2rem;
+    }
+    .hero-content p {
+      font-size: 1.1rem;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .hero-content h1 {
+      font-size: 1.75rem;
+    }
+    .hero-content p {
+      font-size: 0.95rem;
+    }
+    .hero-content a.btn {
+      font-size: 0.95rem;
+      padding: 0.6rem 1.5rem;
+    }
+  }
+</style>
+
+<!-- ✅ Product Showcase -->
+<div class="container py-5" id="products">
+  <h2 class="text-center mb-5">Our Collection</h2>
+  <div class="row">
+    {% for product in products %}
+    <div class="col-md-4 mb-4">
+      <div class="card border-0 shadow-sm h-100">
+        <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}"
+             class="card-img-top"
+             alt="{{ product.name }} image"
+             style="object-fit: cover; height: 300px;">
+        <div class="card-body text-center">
+          <h5 class="fw-semibold">{{ product.name }}</h5>
+          <p class="text-muted">PKR {{ '%.2f'|format(product.price) }}</p>
+          <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-dark">View Details</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ✅ Smooth scroll for all same-page links -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+  });
+</script>
+
+{% endblock %}

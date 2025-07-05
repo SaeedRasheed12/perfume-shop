@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h2>All Customer Orders</h2>
+
+{% if orders %}
+  {% for entry in orders %}
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+          <strong>Order #{{ entry.order.id }}</strong> —
+          {{ entry.order.name }} —
+          {{ entry.order.phone }}<br>
+          {{ entry.order.address }}
+        </div>
+        <div>
+          <span class="badge bg-info text-dark">{{ entry.order.status }}</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="list-group mb-3">
+          {% for item in entry['items'] %}
+          <li class="list-group-item d-flex justify-content-between">
+            {{ item['name'] }} (x{{ item['quantity'] }})
+            <span>${{ '%.2f'|format(item['price'] * item['quantity']) }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <form method="POST" action="{{ url_for('update_order_status', order_id=entry.order.id) }}" class="d-inline">
+          <select name="status" class="form-select form-select-sm d-inline w-auto">
+            <option value="Pending" {% if entry.order.status == 'Pending' %}selected{% endif %}>Pending</option>
+            <option value="Shipped" {% if entry.order.status == 'Shipped' %}selected{% endif %}>Shipped</option>
+            <option value="Delivered" {% if entry.order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+          </select>
+          <button type="submit" class="btn btn-sm btn-primary">Update</button>
+        </form>
+        <a href="{{ url_for('delete_order', order_id=entry.order.id) }}" class="btn btn-sm btn-danger ms-2">Delete</a>
+      </div>
+    </div>
+  {% endfor %}
+{% else %}
+  <p>No orders found.</p>
+{% endif %}
+
+<a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+{% endblock %}

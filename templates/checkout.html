@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+  <h2 class="mb-4">Checkout</h2>
+
+  <form method="POST" class="col-lg-6 mx-auto">
+    <div class="mb-3">
+      <label class="form-label">Full Name</label>
+      <input type="text" name="name" class="form-control" placeholder="Enter your full name" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Delivery Address</label>
+      <input type="text" name="address" class="form-control" placeholder="Street, City, ZIP" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Phone Number</label>
+      <input type="text" name="phone" class="form-control" placeholder="03XX-XXXXXXX" required>
+    </div>
+
+    <div class="mt-4">
+      <h5 class="mb-3">Order Total:</h5>
+      <p class="fs-4"><strong>PKR {{ '%.2f'|format(total) }}</strong></p>
+    </div>
+
+    <button type="submit" class="btn btn-dark btn-lg mt-3 w-100">Place Order</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="text-center my-5">
+  <h2 class="mb-3">Thank You!</h2>
+  <p class="lead mb-4">Your order has been placed successfully.<br>
+  We’re preparing your perfume with care and will keep you updated!</p>
+  
+  <a href="/" class="btn btn-dark px-4 py-2">🛍️ Continue Shopping</a>
+
+  <div class="mt-4">
+    <p class="text-muted">Need help with your order?</p>
+    <a href="{{ url_for('contact') }}" class="btn btn-outline-secondary">Contact Us</a>
+  </div>
+</div>
+{% endblock %}
