@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5">
+  <h2 class="mb-4 text-center">Find Your Signature Scent</h2>
+  <form method="POST" class="col-md-6 mx-auto">
+    <div class="mb-3">
+      <label class="form-label">What scent family do you prefer?</label><br>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="note" value="Floral" required> Floral
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="note" value="Woody"> Woody
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">When will you wear it?</label><br>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="time" value="Day" required> Day
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="time" value="Night"> Night
+      </div>
+    </div>
+    <button type="submit" class="btn btn-dark">Find My Match</button>
+  </form>
+</div>
+{% endblock %}

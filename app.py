@@ -3,6 +3,11 @@ import sqlite3
 import os
 from werkzeug.utils import secure_filename
 from functools import wraps
+import random
+import string
+
+def generate_tracking_code():
+    return 'BA' + ''.join(random.choices(string.digits, k=6))
 
 app = Flask(__name__)
 app.secret_key = 'YOUR_SUPER_SECRET_KEY_CHANGE_THIS'
@@ -98,36 +103,112 @@ def remove_from_cart(product_id):
     flash('Item removed from cart.')
     return redirect(url_for('cart'))
 
+@app.route('/track', methods=['GET', 'POST'])
+def track_order():
+    order = None
+
+    if request.method == 'POST':
+        tracking_code = request.form['tracking_code'].strip()
+
+        conn = get_db_connection()
+        order = conn.execute(
+            'SELECT * FROM orders WHERE tracking_code = ?', (tracking_code,)
+        ).fetchone()
+        conn.close()
+
+        if not order:
+            flash('Tracking code not found.')
+
+    return render_template('track.html', order=order)
+
 @app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     cart = session.get('cart', [])
-    if not cart:
-        flash('Your cart is empty.')
-        return redirect(url_for('index'))
+    subtotal = sum(item['price'] * item['quantity'] for item in cart)
+    discount_amount = 0
+    coupon_code = ''
+    delivery_fee = 0  # default
+
     if request.method == 'POST':
+        if not cart:
+            flash('Your cart is empty!')
+            return redirect(url_for('cart'))
+
         name = request.form['name']
         address = request.form['address']
         phone = request.form['phone']
+        coupon_code = request.form.get('coupon_code', '').strip().upper()
 
         conn = get_db_connection()
-        conn.execute('INSERT INTO orders (name, address, phone) VALUES (?, ?, ?)', (name, address, phone))
+        # ✅ Pull delivery fee from settings if it exists
+        delivery_row = conn.execute("SELECT value FROM settings WHERE key = 'delivery_fee'").fetchone()
+        delivery_fee = float(delivery_row['value']) if delivery_row else 0
+
+        if coupon_code:
+            coupon = conn.execute(
+                'SELECT * FROM coupons WHERE code = ?', (coupon_code,)
+            ).fetchone()
+
+            if coupon:
+                if coupon['type'] == 'percentage':
+                    discount_amount = subtotal * (coupon['discount'] / 100)
+                    flash(f"Coupon applied! You saved {coupon['discount']}% off.")
+                elif coupon['type'] == 'fixed':
+                    discount_amount = coupon['discount']
+                    flash(f"Coupon applied! You saved PKR {discount_amount:.2f}.")
+                elif coupon['type'] == 'free_delivery':
+                    delivery_fee = 0
+                    flash("Coupon applied! Free delivery activated.")
+                else:
+                    flash('Unknown coupon type.')
+            else:
+                conn.close()
+                flash('Invalid coupon code! Please try again.')
+                return redirect(url_for('checkout'))
+
+        conn.close()
+
+        final_total = max(0, subtotal + delivery_fee - discount_amount)
+
+        tracking_code = generate_tracking_code()
+
+        conn = get_db_connection()
+        # ✅ Save coupon, discount, tracking code
+        conn.execute(
+            '''
+            INSERT INTO orders (name, address, phone, tracking_code, coupon_code, discount)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''',
+            (name, address, phone, tracking_code, coupon_code, discount_amount)
+        )
         order_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+
         for item in cart:
-            conn.execute('INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)',
-                         (order_id, item['id'], item['quantity']))
+            conn.execute(
+                'INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)',
+                (order_id, item['id'], item['quantity'])
+            )
+
         conn.commit()
         conn.close()
 
         session.pop('cart', None)
-        flash('Order placed successfully!')
-        return redirect(url_for('thankyou'))
 
-    total = sum(item['price'] * item['quantity'] for item in cart)
-    return render_template('checkout.html', cart=cart, total=total)
+        return redirect(url_for('invoice', order_id=order_id))
+
+    # GET request: show checkout page
+    return render_template(
+        'checkout.html',
+        subtotal=subtotal,
+        discount=discount_amount,
+        delivery_fee=delivery_fee,
+        total=subtotal + delivery_fee - discount_amount
+    )
 
 @app.route('/thankyou')
 def thankyou():
-    return render_template('thankyou.html')
+    tracking_code = request.args.get('tracking_code')
+    return render_template('thankyou.html', tracking_code=tracking_code)
 
 # -----------------------------
 # ✉️ Static pages
@@ -163,16 +244,104 @@ def admin_login():
             flash('Invalid credentials.')
     return render_template('admin_login.html')
 
+@app.route('/know-your-perfume')
+def know_your_perfume():
+    conn = get_db_connection()
+    image = conn.execute('SELECT * FROM know_your_perfume ORDER BY id DESC LIMIT 1').fetchone()
+    conn.close()
+    return render_template('know_your_perfume.html', know_your_perfume=image)
+
+@app.route('/admin/upload_know_your_perfume', methods=['POST'])
+@login_required
+def upload_know_your_perfume():
+    file = request.files['know_your_perfume_image']
+    if file and file.filename:
+        filename = secure_filename(file.filename)
+        file.save(os.path.join('static/uploads', filename))
+
+        conn = get_db_connection()
+        conn.execute('DELETE FROM know_your_perfume')  # keep only one
+        conn.execute('INSERT INTO know_your_perfume (filename) VALUES (?)', (filename,))
+        conn.commit()
+        conn.close()
+
+        flash('Know Your Perfume guide image uploaded.')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/update_delivery_fee', methods=['POST'])
+@login_required
+def set_delivery_fee():  # <-- ✅ different name, same endpoint URL
+    fee = request.form['delivery_fee']
+    conn = get_db_connection()
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    ''')
+    conn.execute('''
+        INSERT INTO settings (key, value) VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value=excluded.value
+    ''', ('delivery_fee', fee))
+    conn.commit()
+    conn.close()
+    flash(f'Delivery fee updated to PKR {fee}')
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
     conn = get_db_connection()
+
     products = conn.execute('SELECT * FROM products').fetchall()
     banner = conn.execute('SELECT * FROM banners ORDER BY id DESC LIMIT 1').fetchone()
     background = conn.execute('SELECT * FROM backgrounds ORDER BY id DESC LIMIT 1').fetchone()
     categories = conn.execute('SELECT * FROM categories').fetchall()
+
+    # ✅ Fetch current delivery fee
+    fee_row = conn.execute("SELECT value FROM settings WHERE key = 'delivery_fee'").fetchone()
+    delivery_fee = float(fee_row['value']) if fee_row else 0
+
+    # ✅ Fetch current Top Banner announcement text
+    banner_row = conn.execute("SELECT value FROM settings WHERE key = 'top_banner'").fetchone()
+    top_banner = banner_row['value'] if banner_row else ''
+
+    # ✅ Fetch Know Your Perfume image
+    know_your_perfume = conn.execute(
+        'SELECT * FROM know_your_perfume ORDER BY id DESC LIMIT 1'
+    ).fetchone()
+
     conn.close()
-    return render_template('admin_dashboard.html', products=products, banner=banner, background=background, categories=categories)
+
+    return render_template(
+        'admin_dashboard.html',
+        products=products,
+        banner=banner,
+        background=background,
+        categories=categories,
+        delivery_fee=delivery_fee,             # ✅ Delivery fee
+        know_your_perfume=know_your_perfume,   # ✅ Guide image
+        top_banner=top_banner                  # ✅ New! Top Banner text
+    )
+
+@app.route('/admin/add_coupon', methods=['POST'])
+@login_required
+def add_coupon():
+    code = request.form['code'].strip().upper()
+    discount = float(request.form['discount'])
+    type_ = request.form['type']
+    description = request.form.get('description')
+
+    conn = get_db_connection()
+    conn.execute(
+        'INSERT INTO coupons (code, discount, type, description) VALUES (?, ?, ?, ?)',
+        (code, discount, type_, description)
+    )
+    conn.commit()
+    conn.close()
+
+    flash('Coupon added successfully.')
+    return redirect(url_for('admin_dashboard'))
 
 # -----------------------------
 # ➕ Add Product
@@ -198,6 +367,21 @@ def add_product():
     flash('Product added.')
     return redirect(url_for('admin_dashboard'))
 
+@app.route('/admin/update_delivery_fee', methods=['POST'])
+@login_required
+def update_delivery_fee():
+    new_fee = request.form['delivery_fee']
+    conn = get_db_connection()
+    conn.execute('''
+        INSERT INTO settings (key, value)
+        VALUES ('delivery_fee', ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    ''', (new_fee,))
+    conn.commit()
+    conn.close()
+    flash('Delivery fee updated!')
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/admin/delete/<int:product_id>')
 @login_required
 def delete_product(product_id):
@@ -219,17 +403,20 @@ def delete_order(order_id):
     flash(f'Order #{order_id} deleted.')
     return redirect(url_for('admin_orders'))
 
-@app.route('/admin/update_order_status/<int:order_id>', methods=['POST'])
-@login_required
+@app.route('/update_order_status/<int:order_id>', methods=['POST'])
 def update_order_status(order_id):
     new_status = request.form['status']
+
     conn = get_db_connection()
-    conn.execute('UPDATE orders SET status = ? WHERE id = ?', (new_status, order_id))
+    conn.execute(
+        'UPDATE orders SET status = ? WHERE id = ?',
+        (new_status, order_id)
+    )
     conn.commit()
     conn.close()
-    flash(f'Order #{order_id} status updated to {new_status}.')
-    return redirect(url_for('admin_orders'))
 
+    flash('Order status updated.')
+    return redirect(url_for('admin_orders'))
 # -----------------------------
 # 📸 Upload Banner Image/Video
 # -----------------------------
@@ -270,16 +457,37 @@ def admin_categories():
 @app.route('/category/<int:category_id>')
 def view_category(category_id):
     conn = get_db_connection()
-    category = conn.execute('SELECT * FROM categories WHERE id = ?', (category_id,)).fetchone()
+
+    # ✅ Get the requested category
+    category = conn.execute(
+        'SELECT * FROM categories WHERE id = ?', (category_id,)
+    ).fetchone()
+
     if not category:
+        conn.close()
         flash('Category not found.')
         return redirect(url_for('index'))
 
-    products = conn.execute('SELECT * FROM products WHERE category_id = ?', (category_id,)).fetchall()
+    # ✅ Get all products for this category
+    products = conn.execute(
+        'SELECT * FROM products WHERE category_id = ?', (category_id,)
+    ).fetchall()
+
+    # ✅ Also get all categories for sidebar/nav
     categories = conn.execute('SELECT * FROM categories').fetchall()
-    banner = conn.execute('SELECT * FROM banners ORDER BY id DESC LIMIT 1').fetchone()
-    background = conn.execute('SELECT * FROM backgrounds ORDER BY id DESC LIMIT 1').fetchone()
+
+    # ✅ Fetch banner and background for layout
+    banner = conn.execute(
+        'SELECT * FROM banners ORDER BY id DESC LIMIT 1'
+    ).fetchone()
+
+    background = conn.execute(
+        'SELECT * FROM backgrounds ORDER BY id DESC LIMIT 1'
+    ).fetchone()
+
     conn.close()
+
+    # ✅ Render category.html with all needed context
     return render_template(
         'category.html',
         category=category,
@@ -288,6 +496,7 @@ def view_category(category_id):
         banner=banner,
         background=background
     )
+
 
 @app.route('/admin/add_category', methods=['POST'])
 @login_required
@@ -309,6 +518,62 @@ def delete_category(category_id):
     conn.close()
     flash('Category deleted.')
     return redirect(url_for('admin_categories'))
+
+@app.route('/admin/update_product/<int:product_id>', methods=['GET', 'POST'])
+@login_required
+def update_product(product_id):
+    conn = get_db_connection()
+    product = conn.execute('SELECT * FROM products WHERE id = ?', (product_id,)).fetchone()
+
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form['description']
+        price = request.form['price']
+
+        conn.execute('UPDATE products SET name = ?, description = ?, price = ? WHERE id = ?',
+                     (name, description, price, product_id))
+        conn.commit()
+        conn.close()
+
+        flash('Product updated successfully!')
+        return redirect(url_for('admin_dashboard'))
+
+    conn.close()
+    return render_template('admin_update_product.html', product=product)
+
+# ✅ Add to Wishlist
+@app.route('/add_to_wishlist/<int:product_id>')
+def add_to_wishlist(product_id):
+    if 'wishlist' not in session:
+        session['wishlist'] = []
+    if product_id not in session['wishlist']:
+        session['wishlist'].append(product_id)
+        flash('Product added to wishlist!')
+    else:
+        flash('Product already in wishlist.')
+    return redirect(url_for('index'))
+
+# ✅ Remove from Wishlist
+@app.route('/remove_from_wishlist/<int:product_id>')
+def remove_from_wishlist(product_id):
+    if 'wishlist' in session and product_id in session['wishlist']:
+        session['wishlist'].remove(product_id)
+        flash('Product removed from wishlist.')
+    return redirect(url_for('view_wishlist'))
+
+# ✅ View Wishlist Page
+@app.route('/wishlist')
+def view_wishlist():
+    if 'wishlist' not in session or not session['wishlist']:
+        return render_template('wishlist.html', products=[])
+
+    conn = get_db_connection()
+    placeholders = ','.join(['?'] * len(session['wishlist']))
+    query = f'SELECT * FROM products WHERE id IN ({placeholders})'
+    products = conn.execute(query, session['wishlist']).fetchall()
+    conn.close()
+
+    return render_template('wishlist.html', products=products)
 
 @app.route('/admin/orders')
 @login_required
@@ -356,6 +621,82 @@ def upload_background():
     flash('Background updated.')
     return redirect(url_for('admin_dashboard'))
 
+@app.route('/fragrance-quiz', methods=['GET', 'POST'])
+def fragrance_quiz():
+    if request.method == 'POST':
+        # Get answers
+        note = request.form.get('note')
+        time = request.form.get('time')
+
+        conn = get_db_connection()
+        # Example query: you can match more fields
+        product = conn.execute('''
+            SELECT * FROM products 
+            WHERE description LIKE ? OR description LIKE ?
+            LIMIT 1
+        ''', (f'%{note}%', f'%{time}%')).fetchone()
+        conn.close()
+
+        return render_template('quiz_result.html', product=product)
+
+    return render_template('fragrance_quiz.html')
+
+@app.route('/admin/update_top_banner', methods=['POST'])
+@login_required
+def update_top_banner():
+    text = request.form['banner_text']
+    conn = get_db_connection()
+    conn.execute(
+        '''
+        INSERT INTO settings (key, value) VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value=excluded.value
+        ''', ('top_banner', text)
+    )
+    conn.commit()
+    conn.close()
+    flash('Top banner updated successfully!')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/invoice/<int:order_id>')
+def invoice(order_id):
+    conn = get_db_connection()
+
+    # ✅ Get order details
+    order = conn.execute('SELECT * FROM orders WHERE id = ?', (order_id,)).fetchone()
+
+    # ✅ Get ordered items
+    items = conn.execute('''
+        SELECT oi.quantity, p.name, p.price
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = ?
+    ''', (order_id,)).fetchall()
+
+    # ✅ Calculate subtotal
+    subtotal = sum(item['price'] * item['quantity'] for item in items)
+
+    # ✅ Get delivery fee (unless coupon disables it)
+    delivery_fee = 0
+    if order['coupon_code'] and order['coupon_code'].upper() == 'FREEDELIVERY':
+        delivery_fee = 0
+    else:
+        settings_row = conn.execute("SELECT value FROM settings WHERE key = 'delivery_fee'").fetchone()
+        delivery_fee = float(settings_row['value']) if settings_row else 0
+
+    # ✅ Final total: subtotal + delivery - discount
+    final_total = max(0, subtotal + delivery_fee - order['discount'])
+
+    conn.close()
+
+    return render_template(
+        'invoice.html',
+        order=order,
+        items=items,
+        subtotal=subtotal,
+        delivery_fee=delivery_fee,
+        final_total=final_total
+    )
+
 @app.route('/admin/upload_logo', methods=['POST'])
 @login_required
 def upload_logo():
@@ -393,14 +734,17 @@ def init_db():
             )
         ''')
 
-        # ✅ ORDERS table with STATUS for tracking
+        # ✅ ORDERS table with STATUS, TRACKING CODE, COUPON CODE, DISCOUNT
         conn.execute('''
             CREATE TABLE orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT,
                 address TEXT,
                 phone TEXT,
-                status TEXT DEFAULT 'Pending'
+                status TEXT DEFAULT 'Pending',
+                tracking_code TEXT,
+                coupon_code TEXT,
+                discount REAL DEFAULT 0
             )
         ''')
 
@@ -447,10 +791,63 @@ def init_db():
             )
         ''')
 
+        # ✅ COUPONS table
+        conn.execute('''
+            CREATE TABLE coupons (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT UNIQUE NOT NULL,
+                discount REAL NOT NULL,
+                type TEXT CHECK(type IN ('percentage', 'fixed', 'free_delivery')),
+                description TEXT
+            )
+        ''')
+
+        # ✅ SETTINGS table for delivery fee & banner text
+        conn.execute('''
+            CREATE TABLE settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT UNIQUE NOT NULL,
+                value TEXT
+            )
+        ''')
+
+        # ✅ KNOW YOUR PERFUME table
+        conn.execute('''
+            CREATE TABLE know_your_perfume (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                filename TEXT NOT NULL
+            )
+        ''')
+
+        # ✅ Insert default delivery fee
+        conn.execute(
+            'INSERT INTO settings (key, value) VALUES (?, ?)',
+            ('delivery_fee', '300')
+        )
+
+        # ✅ Insert default Top Banner text
+        conn.execute(
+            'INSERT INTO settings (key, value) VALUES (?, ?)',
+            ('top_banner', '15 Days Hassle-Free Return | Free Shipping on Orders Above PKR 3,000')
+        )
+
         conn.commit()
         conn.close()
-        print("✅ Database initialized with status tracking for orders!")
-        
+        print("✅ Database initialized with all tables, delivery fee & top banner settings!")
+
+
+# ✅ Context processor for Top Banner (add this above init_db, once)
+@app.context_processor
+def inject_settings():
+    conn = get_db_connection()
+    banner_row = conn.execute(
+        "SELECT value FROM settings WHERE key = 'top_banner'"
+    ).fetchone()
+    conn.close()
+    return dict(top_banner=banner_row['value'] if banner_row else '')
+
+
+# ✅ App runner for Replit/Fly.io/Render
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=8080)

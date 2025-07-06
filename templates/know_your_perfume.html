@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+  <h2 class="text-center mb-4">Know Your Perfume</h2>
+  <p class="text-center mb-5">
+    Understanding fragrance concentrations helps you choose the perfect scent for your lifestyle.
+    This guide shows how long different types last and what makes our oil-based perfumes unique.
+  </p>
+
+  {% if know_your_perfume %}
+    <div class="text-center mb-4">
+      <img src="{{ url_for('static', filename='uploads/' ~ know_your_perfume.filename) }}"
+           alt="Fragrance Concentration Guide"
+           class="img-fluid rounded shadow">
+    </div>
+  {% else %}
+    <p class="text-center text-muted mb-5">No guide has been uploaded yet. Please check back later!</p>
+  {% endif %}
+
+  <div class="text-center">
+    <a href="{{ url_for('index') }}" class="btn btn-dark">← Back to Shop</a>
+  </div>
+</div>
+{% endblock %}

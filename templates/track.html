@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+  <h2 class="mb-4">Track Your Order</h2>
+
+  <form method="POST" class="mb-4">
+    <label class="form-label">Enter Tracking Code:</label>
+    <input type="text" name="tracking_code" class="form-control mb-2" required placeholder="e.g. BA123456">
+    <button type="submit" class="btn btn-primary">Track Order</button>
+  </form>
+
+  {% if order %}
+    <div class="card p-4">
+      <h5>Order Details</h5>
+      <p><strong>Name:</strong> {{ order.name }}</p>
+      <p><strong>Address:</strong> {{ order.address }}</p>
+      <p><strong>Status:</strong> {{ order.status }}</p>
+      <p><strong>Tracking Code:</strong> {{ order.tracking_code }}</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

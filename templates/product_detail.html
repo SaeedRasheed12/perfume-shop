@@ -3,11 +3,13 @@
 {% block content %}
 <div class="container py-5">
   <div class="row align-items-center">
+    
     <!-- ✅ Product Image -->
     <div class="col-md-6 mb-4 mb-md-0">
       <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}" 
-           alt="{{ product.name }}" 
-           class="img-fluid rounded shadow">
+           alt="{{ product.name }} image" 
+           class="img-fluid rounded shadow"
+           style="object-fit: cover; max-height: 500px; width: 100%;">
     </div>
 
     <!-- ✅ Product Details -->
@@ -15,10 +17,30 @@
       <h2 class="fw-bold mb-3">{{ product.name }}</h2>
       <h4 class="text-muted mb-3">PKR {{ '%.2f'|format(product.price) }}</h4>
       <p class="mb-4">{{ product.description }}</p>
+
       <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-dark px-4 py-2">
         🛒 Add to Cart
       </a>
+
+      <div class="mt-4">
+        <a href="/" class="text-decoration-none text-secondary">&larr; Back to Shop</a>
+      </div>
     </div>
   </div>
 </div>
+
+<style>
+  /* ✅ Responsive tweaks for small screens */
+  @media (max-width: 768px) {
+    .col-md-6 h2 {
+      font-size: 1.75rem;
+    }
+    .col-md-6 h4 {
+      font-size: 1.2rem;
+    }
+    .col-md-6 p {
+      font-size: 1rem;
+    }
+  }
+</style>
 {% endblock %}

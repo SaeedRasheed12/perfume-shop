@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+  <h2 class="mb-4">Invoice</h2>
+
+  <p><strong>Order #{{ order.id }}</strong> | Tracking Code: <strong>{{ order.tracking_code }}</strong></p>
+  <p>
+    <strong>Name:</strong> {{ order.name }}<br>
+    <strong>Address:</strong> {{ order.address }}<br>
+    <strong>Phone:</strong> {{ order.phone }}
+  </p>
+
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Qty</th>
+        <th>Unit Price</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>PKR {{ '%.2f'|format(item.price) }}</td>
+        <td>PKR {{ '%.2f'|format(item.price * item.quantity) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="mt-4">
+    <p><strong>Subtotal:</strong> PKR {{ '%.2f'|format(subtotal) }}</p>
+    <p><strong>Delivery Fee:</strong> PKR {{ '%.2f'|format(delivery_fee) }}</p>
+    {% if order.coupon_code %}
+      <p><strong>Coupon Code:</strong> {{ order.coupon_code }}</p>
+      <p><strong>Discount:</strong> -PKR {{ '%.2f'|format(order.discount) }}</p>
+    {% endif %}
+    <hr>
+    <h4><strong>Final Total:</strong> PKR {{ '%.2f'|format(final_total) }}</h4>
+  </div>
+</div>
+{% endblock %}

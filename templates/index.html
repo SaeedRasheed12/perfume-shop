@@ -2,14 +2,14 @@
 
 {% block content %}
 
-<!-- ✅ Luxury Hero Section with responsive text -->
+<!-- ✅ Luxury Hero Section -->
 {% if banner and banner.video %}
   <div class="hero">
     <video autoplay muted loop playsinline>
       <source src="{{ url_for('static', filename='uploads/banners/' ~ banner.video) }}" type="video/mp4">
     </video>
     <div class="hero-content">
-      <h1 class="display-3 fw-bold mb-3">Bin Ahmed Parfüm</h1>
+      <h1 class="fw-bold mb-3">Bin Ahmed Parfüm</h1>
       <p class="lead mb-4">Discover Your Signature Scent</p>
       <a href="#products" class="btn btn-light px-4 py-2">Shop Now</a>
     </div>
@@ -17,7 +17,7 @@
 {% elif banner and banner.filename %}
   <div class="hero" style="background: url('{{ url_for('static', filename='uploads/banners/' ~ banner.filename) }}') center/cover no-repeat;">
     <div class="hero-content">
-      <h1 class="display-3 fw-bold mb-3">Bin Ahmed Parfüm</h1>
+      <h1 class="fw-bold mb-3">Bin Ahmed Parfüm</h1>
       <p class="lead mb-4">Discover Your Signature Scent</p>
       <a href="#products" class="btn btn-light px-4 py-2">Shop Now</a>
     </div>
@@ -25,15 +25,15 @@
 {% else %}
   <div class="hero bg-dark">
     <div class="hero-content">
-      <h1 class="display-3 fw-bold mb-3 text-white">Bin Ahmed Parfüm</h1>
+      <h1 class="fw-bold mb-3 text-white">Bin Ahmed Parfüm</h1>
       <p class="lead mb-4 text-white-50">Discover Your Signature Scent</p>
       <a href="#products" class="btn btn-light px-4 py-2">Shop Now</a>
     </div>
   </div>
 {% endif %}
 
+<!-- ✅ Hero CSS -->
 <style>
-  /* ✅ Limit hero content width and adjust spacing for all screens */
   .hero-content {
     max-width: 800px;
     margin: 0 auto;
@@ -56,23 +56,14 @@
     padding: 0.75rem 2rem;
   }
 
-  /* ✅ Responsive adjustments */
   @media (max-width: 992px) {
-    .hero-content h1 {
-      font-size: 2.2rem;
-    }
-    .hero-content p {
-      font-size: 1.1rem;
-    }
+    .hero-content h1 { font-size: 2.2rem; }
+    .hero-content p { font-size: 1.1rem; }
   }
 
   @media (max-width: 576px) {
-    .hero-content h1 {
-      font-size: 1.75rem;
-    }
-    .hero-content p {
-      font-size: 0.95rem;
-    }
+    .hero-content h1 { font-size: 1.75rem; }
+    .hero-content p { font-size: 0.95rem; }
     .hero-content a.btn {
       font-size: 0.95rem;
       padding: 0.6rem 1.5rem;
@@ -91,10 +82,15 @@
              class="card-img-top"
              alt="{{ product.name }} image"
              style="object-fit: cover; height: 300px;">
-        <div class="card-body text-center">
+        <div class="card-body text-center d-flex flex-column">
           <h5 class="fw-semibold">{{ product.name }}</h5>
-          <p class="text-muted">PKR {{ '%.2f'|format(product.price) }}</p>
-          <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-dark">View Details</a>
+          <p class="text-muted mb-2">PKR {{ '%.2f'|format(product.price) }}</p>
+          <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-outline-dark btn-sm mb-2">
+            View Details
+          </a>
+          <a href="{{ url_for('add_to_wishlist', product_id=product.id) }}" class="btn btn-outline-secondary btn-sm">
+            ❤️ Add to Wishlist
+          </a>
         </div>
       </div>
     </div>
@@ -102,7 +98,7 @@
   </div>
 </div>
 
-<!-- ✅ Smooth scroll for all same-page links -->
+<!-- ✅ Smooth scroll for same-page links -->
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {

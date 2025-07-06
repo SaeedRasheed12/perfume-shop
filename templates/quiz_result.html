@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5 text-center">
+  <h2 class="mb-4">Your Perfect Match</h2>
+  {% if product %}
+    <h4>{{ product.name }}</h4>
+    <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}"
+         class="img-fluid mb-3"
+         style="max-width: 300px;">
+    <p>{{ product.description }}</p>
+    <p><strong>Price:</strong> PKR {{ '%.2f'|format(product.price) }}</p>
+    <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-primary">View Details</a>
+  {% else %}
+    <p>Sorry, we couldn't find a perfect match. Please try different options!</p>
+    <a href="{{ url_for('fragrance_quiz') }}" class="btn btn-secondary">Try Again</a>
+  {% endif %}
+</div>
+{% endblock %}
