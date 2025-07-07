@@ -131,7 +131,7 @@
     </table>
   </div>
 
-  <!-- ✅ Coupon Management -->
+  <!-- ✅ Coupon Management + View + Delete -->
   <div class="card p-4 mb-5 shadow rounded-3">
     <h4 class="mb-3">Add Coupon</h4>
     <form method="POST" action="{{ url_for('add_coupon') }}">
@@ -157,6 +157,38 @@
       </div>
       <button type="submit" class="btn btn-warning">Add Coupon</button>
     </form>
+
+    <!-- ✅ Show all coupons with Delete -->
+    <h4 class="mt-5 mb-3">All Coupons</h4>
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Code</th>
+          <th>Discount</th>
+          <th>Type</th>
+          <th>Used</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for coupon in coupons %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ coupon.code }}</td>
+          <td>{{ coupon.discount }}</td>
+          <td>{{ coupon.type }}</td>
+          <td>{{ coupon.used }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('delete_coupon', coupon_id=coupon.id) }}"
+                  onsubmit="return confirm('Are you sure you want to delete this coupon?');">
+              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 
   <!-- ✅ Spin Wheel Feature Toggle -->
@@ -181,6 +213,29 @@
     {% endif %}
   </div>
 
+  <!-- ✅ SPIN HISTORY SECTION -->
+<h3>🎡 Spin Wheel History</h3>
+<table border="1" cellpadding="8">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Phone Number</th>
+      <th>Coupon Code</th>
+      <th>Spun At</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for spin in spins %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ spin['customer_phone'] }}</td>
+      <td>{{ spin['coupon_code'] }}</td>
+      <td>{{ spin['created_at'] }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
   <!-- ✅ Delivery Fee -->
   <div class="card p-4 mb-5 shadow rounded-3">
     <h4 class="mb-3">Set Delivery Fee</h4>
@@ -198,7 +253,7 @@
     {% endif %}
   </div>
 
-  <!-- ✅ Upload Hero Banner -->
+  <!-- ✅ Hero Banner with Delete -->
   <div class="card p-4 mb-5 shadow rounded-3">
     <h4 class="mb-3">Upload Hero Banner</h4>
     <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_banner') }}">
@@ -214,33 +269,54 @@
     </form>
     {% if banner and banner.filename %}
       <p class="mt-3 fw-semibold">Current Banner Image:</p>
-      <img src="{{ url_for('static', filename='uploads/banners/' ~ banner.filename) }}" class="img-fluid rounded shadow">
+      <img src="{{ url_for('static', filename='uploads/banners/' ~ banner.filename) }}" class="img-fluid rounded shadow mb-2">
+      <form method="POST" action="{{ url_for('delete_banner', banner_id=banner.id) }}"
+            onsubmit="return confirm('Delete this banner?');">
+        <button type="submit" class="btn btn-danger btn-sm">Delete Banner</button>
+      </form>
     {% endif %}
     {% if banner and banner.video %}
       <p class="mt-3 fw-semibold">Current Banner Video:</p>
       <video src="{{ url_for('static', filename='uploads/banners/' ~ banner.video) }}"
-             autoplay muted loop controls class="img-fluid rounded shadow"></video>
+             autoplay muted loop controls class="img-fluid rounded shadow mb-2"></video>
+      <form method="POST" action="{{ url_for('delete_banner', banner_id=banner.id) }}"
+            onsubmit="return confirm('Delete this banner video?');">
+        <button type="submit" class="btn btn-danger btn-sm">Delete Video</button>
+      </form>
     {% endif %}
   </div>
 
-  <!-- ✅ Upload Shop Logo -->
-  <div class="card p-4 mb-5 shadow rounded-3">
-    <h4 class="mb-3">Upload Shop Logo</h4>
-    <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_logo') }}">
-      <div class="mb-3">
-        <label class="form-label">Logo Image</label>
-        <input type="file" name="logo" class="form-control" required>
-      </div>
-      <button type="submit" class="btn btn-info">Upload Logo</button>
-    </form>
-    {% if logo %}
-      <p class="mt-3 fw-semibold">Current Logo:</p>
+
+<!-- ✅ Logo with Delete -->
+<div class="card p-4 mb-5 shadow rounded-3">
+  <h4 class="mb-3">Upload Shop Logo</h4>
+  <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_logo') }}">
+    <div class="mb-3">
+      <label class="form-label">Logo Image</label>
+      <input type="file" name="logo" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-info">Upload Logo</button>
+  </form>
+
+  {% if logo %}
+    <div class="mt-3">
+      <p class="fw-semibold">Current Logo:</p>
       <img src="{{ url_for('static', filename='uploads/logos/' ~ logo.filename) }}"
-           class="img-fluid rounded shadow" style="max-height: 100px;">
-    {% endif %}
-  </div>
+           alt="Shop Logo"
+           class="img-fluid rounded shadow mb-2"
+           style="max-height: 100px;">
+      <form method="POST"
+            action="{{ url_for('delete_logo', logo_id=logo.id) }}"
+            onsubmit="return confirm('Are you sure you want to delete this logo?');">
+        <button type="submit" class="btn btn-danger btn-sm">Delete Logo</button>
+      </form>
+    </div>
+  {% else %}
+    <p class="text-muted mt-2">No logo uploaded yet.</p>
+  {% endif %}
+</div>
 
-  <!-- ✅ Know Your Perfume Upload -->
+  <!-- ✅ Know Your Perfume with Delete -->
   <div class="card p-4 mb-5 shadow rounded-3">
     <h4 class="mb-3">Upload "Know Your Perfume" Guide Image</h4>
     <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_know_your_perfume') }}">
@@ -253,7 +329,11 @@
     {% if know_your_perfume %}
       <p class="mt-3 fw-semibold">Current Guide Image:</p>
       <img src="{{ url_for('static', filename='uploads/' ~ know_your_perfume.filename) }}"
-           class="img-fluid rounded shadow">
+           class="img-fluid rounded shadow mb-2">
+      <form method="POST" action="{{ url_for('delete_kyp', kyp_id=know_your_perfume.id) }}"
+            onsubmit="return confirm('Delete this guide image?');">
+        <button type="submit" class="btn btn-danger btn-sm">Delete Guide</button>
+      </form>
     {% endif %}
   </div>
 
@@ -269,7 +349,7 @@
     </form>
   </div>
 
-  <!-- ✅ Upload Background -->
+  <!-- ✅ Background with Delete -->
   <div class="card p-4 mb-4 shadow rounded-3">
     <h4 class="mb-3">Upload Background Theme</h4>
     <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_background') }}">
@@ -282,10 +362,13 @@
     {% if background %}
       <p class="mt-3 fw-semibold">Current Background:</p>
       <img src="{{ url_for('static', filename='uploads/backgrounds/' ~ background.filename) }}"
-           class="img-fluid rounded shadow">
+           class="img-fluid rounded shadow mb-2">
+      <form method="POST" action="{{ url_for('delete_background', background_id=background.id) }}"
+            onsubmit="return confirm('Delete this background?');">
+        <button type="submit" class="btn btn-danger btn-sm">Delete Background</button>
+      </form>
     {% endif %}
   </div>
-</div>
 
 <!-- ✅ Optional: Card hover effect -->
 <style>

@@ -104,12 +104,15 @@ def remove_from_cart(product_id):
     flash('Item removed from cart.')
     return redirect(url_for('cart'))
 
-@app.route('/spin', methods=['GET'])
-def spin():
-    import random
+from flask import request, session, render_template_string, redirect, url_for
+from datetime import datetime, timedelta
+import random
 
+@app.route('/spin', methods=['GET', 'POST'])
+def spin():
     conn = get_db_connection()
-    # ✅ 1) Check spin setting
+
+    # ✅ 1) Check if spin wheel is enabled in settings
     row = conn.execute(
         "SELECT value FROM settings WHERE key = 'spin_wheel_enabled'"
     ).fetchone()
@@ -123,21 +126,52 @@ def spin():
           <head>
             <title>Spin Wheel Disabled</title>
             <style>
-              body { font-family: Arial, sans-serif; background: #f4f4f4; }
-              .box {
-                max-width: 500px; margin: 100px auto; padding: 40px; background: #fff;
-                text-align: center; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+              body {
+                font-family: 'Segoe UI', Tahoma, sans-serif;
+                background: #f8f9fa;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
               }
-              .box h2 { color: #dc3545; }
+              .card {
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                padding: 40px;
+                max-width: 400px;
+                text-align: center;
+              }
+              .card h2 {
+                color: #dc3545;
+                margin-bottom: 15px;
+              }
+              .card p {
+                color: #555;
+                font-size: 16px;
+              }
               .back-btn {
-                display: inline-block; margin-top: 20px; background: #333; color: #fff;
-                padding: 10px 20px; text-decoration: none; border-radius: 5px;
+                display: inline-block;
+                margin-top: 20px;
+                padding: 12px 24px;
+                background: #007bff;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 30px;
+                transition: background 0.3s ease;
+              }
+              .back-btn:hover {
+                background: #0056b3;
+              }
+              .emoji {
+                font-size: 50px;
               }
             </style>
           </head>
           <body>
-            <div class="box">
-              <h2>🚫 Spin Wheel is Disabled</h2>
+            <div class="card">
+              <div class="emoji">🚫</div>
+              <h2>Spin Wheel Disabled</h2>
               <p>Check back later to try your luck again!</p>
               <a href="{{ url_for('cart') }}" class="back-btn">Back to Cart</a>
             </div>
@@ -145,79 +179,214 @@ def spin():
           </html>
         """)
 
-    # ✅ 2) Already spun in session? Reuse same coupon
-    if 'spin_coupon' in session:
-        coupon_code = session['spin_coupon']
-        # Check if this coupon was used
-        row = conn.execute(
-            "SELECT used FROM coupons WHERE code = ?",
-            (coupon_code,)
+    if request.method == 'POST':
+        phone = request.form['phone'].strip()
+
+        # ✅ 2) Check if customer has spun in last 24 hours
+        last_spin = conn.execute(
+            '''SELECT created_at FROM customer_spins 
+               WHERE customer_phone = ? ORDER BY created_at DESC LIMIT 1''',
+            (phone,)
         ).fetchone()
-        if row and row['used']:
-            conn.close()
-            return render_template_string("""
-              <h2>🚫 This spin coupon was already used!</h2>
-              <a href="{{ url_for('cart') }}">Back to Cart</a>
-            """)
-        discount_percent = int(''.join(filter(str.isdigit, coupon_code)))
-    else:
+
+        if last_spin:
+            spin_time = datetime.strptime(last_spin['created_at'], '%Y-%m-%d %H:%M:%S')
+            if datetime.now() - spin_time < timedelta(hours=24):
+                conn.close()
+                return render_template_string("""
+                  <!DOCTYPE html>
+                  <html lang="en">
+                  <head>
+                    <title>Spin Wheel Locked</title>
+                    <style>
+                      body {
+                        font-family: 'Segoe UI', Tahoma, sans-serif;
+                        background: #f8f9fa;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                      }
+                      .card {
+                        background: #fff;
+                        border-radius: 12px;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                        padding: 40px;
+                        max-width: 400px;
+                        text-align: center;
+                      }
+                      .card h2 {
+                        color: #dc3545;
+                        margin-bottom: 15px;
+                      }
+                      .card p {
+                        color: #555;
+                        font-size: 16px;
+                      }
+                      .back-btn {
+                        display: inline-block;
+                        margin-top: 20px;
+                        padding: 12px 24px;
+                        background: #007bff;
+                        color: #fff;
+                        text-decoration: none;
+                        border-radius: 30px;
+                        transition: background 0.3s ease;
+                      }
+                      .back-btn:hover {
+                        background: #0056b3;
+                      }
+                      .emoji {
+                        font-size: 50px;
+                      }
+                    </style>
+                  </head>
+                  <body>
+                    <div class="card">
+                      <div class="emoji">⏳</div>
+                      <h2>Hold On!</h2>
+                      <p>You already spun the wheel.<br>Try again after 24 hours to win another discount.</p>
+                      <a href="{{ url_for('cart') }}" class="back-btn">Back to Cart</a>
+                    </div>
+                  </body>
+                  </html>
+                """)
+
         # ✅ 3) Generate new spin coupon
         possible_discounts = [5, 10, 15, 20]
         discount_percent = random.choice(possible_discounts)
-        coupon_code = f"SPIN{discount_percent}"
+        coupon_code = f'SPIN{discount_percent}'
 
-        # Check if same spin coupon already exists and is unused
-        existing = conn.execute(
-            'SELECT used FROM coupons WHERE code = ?', (coupon_code,)
+        # ✅ 4) Insert coupon into coupons table if not exists
+        existing_coupon = conn.execute(
+            'SELECT * FROM coupons WHERE code = ?', (coupon_code,)
         ).fetchone()
 
-        if not existing:
+        if not existing_coupon:
             conn.execute(
-                'INSERT INTO coupons (code, discount, type, description, used) VALUES (?, ?, ?, ?, ?)',
-                (coupon_code, discount_percent, 'percentage', 'Spin the Wheel Reward', 0)
+                '''INSERT INTO coupons (code, discount, type, description, used)
+                   VALUES (?, ?, ?, ?, ?)''',
+                (coupon_code, discount_percent, 'percentage', 'Spin Wheel Reward', 0)
             )
             conn.commit()
-        elif existing and existing['used']:
-            conn.close()
-            return render_template_string("""
-              <h2>🚫 This spin coupon was already used!</h2>
-              <a href="{{ url_for('cart') }}">Back to Cart</a>
-            """)
 
+        # ✅ 5) Lock coupon to this customer in customer_spins
+        conn.execute(
+            'INSERT INTO customer_spins (customer_phone, coupon_code) VALUES (?, ?)',
+            (phone, coupon_code)
+        )
+        conn.commit()
+
+        # ✅ 6) Save to session for display
         session['spin_coupon'] = coupon_code
+        session['spin_phone'] = phone
+
+        conn.close()
+
+        return render_template_string("""
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <title>Discount Won</title>
+            <style>
+              body {
+                font-family: 'Segoe UI', Tahoma, sans-serif;
+                background: #f8f9fa;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+              }
+              .card {
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                padding: 40px;
+                max-width: 400px;
+                text-align: center;
+              }
+              .card h2 {
+                color: #28a745;
+                margin-bottom: 15px;
+              }
+              .card p {
+                color: #555;
+                font-size: 16px;
+              }
+              .back-btn {
+                display: inline-block;
+                margin-top: 20px;
+                padding: 12px 24px;
+                background: #28a745;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 30px;
+                transition: background 0.3s ease;
+              }
+              .back-btn:hover {
+                background: #218838;
+              }
+              .emoji {
+                font-size: 50px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div class="emoji">🎉</div>
+              <h2>Congrats!</h2>
+              <p>You won <strong>{{ discount }}% off</strong>!</p>
+              <p>Your coupon code:</p>
+              <p><strong>{{ coupon }}</strong></p>
+              <p>Use this at checkout. Valid only for your phone number.</p>
+              <a href="{{ url_for('cart') }}" class="back-btn">Back to Cart</a>
+            </div>
+          </body>
+          </html>
+        """, discount=discount_percent, coupon=coupon_code)
 
     conn.close()
 
+    # ✅ 7) Form for spin page
     return render_template_string("""
       <!DOCTYPE html>
       <html lang="en">
       <head>
-        <title>Discount Won</title>
+        <title>Spin & Win</title>
         <style>
-          body { font-family: Arial, sans-serif; background: #f4f4f4; }
+          body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8f9fa; }
           .box {
             max-width: 500px; margin: 100px auto; padding: 40px; background: #fff;
-            text-align: center; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
           }
-          .box h2 { color: #28a745; }
-          .box p { font-size: 18px; }
-          .back-btn {
-            display: inline-block; margin-top: 20px; background: #333; color: #fff;
-            padding: 10px 20px; text-decoration: none; border-radius: 5px;
+          .box h2 { color: #007bff; }
+          .box p { font-size: 16px; color: #555; }
+          .box input, .box button {
+            padding: 10px; margin: 10px 0; width: 80%;
+            border: 1px solid #ccc; border-radius: 4px;
+          }
+          .box button {
+            background: #28a745; color: #fff; border: none; cursor: pointer;
+            border-radius: 30px; width: 50%;
+          }
+          .box button:hover {
+            background: #218838;
           }
         </style>
       </head>
       <body>
         <div class="box">
-          <h2>🎉 Congrats! You won {{ discount }}% off!</h2>
-          <p>Your coupon code:</p>
-          <p><strong>{{ coupon }}</strong></p>
-          <p>Use this at checkout to save money.</p>
-          <a href="{{ url_for('cart') }}" class="back-btn">Back to Cart</a>
+          <h2>🎡 Spin & Win!</h2>
+          <p>Enter your phone number to spin the wheel:</p>
+          <form method="POST">
+            <input type="text" name="phone" required placeholder="Your phone number">
+            <br>
+            <button type="submit">Spin Now</button>
+          </form>
         </div>
       </body>
       </html>
-    """, discount=discount_percent, coupon=coupon_code)
+    """)
 
 @app.route('/track', methods=['GET', 'POST'])
 def track_order():
@@ -280,7 +449,7 @@ def checkout():
 
         name = request.form['name']
         address = request.form['address']
-        phone = request.form['phone']
+        phone = request.form['phone'].strip()
 
         # ✅ Always UPPERCASE input
         coupon_code = request.form.get('coupon_code', '').strip().upper()
@@ -301,26 +470,40 @@ def checkout():
             ).fetchone()
 
             if coupon:
-                # ✅ Block if spin coupon was already used
-                if coupon_code.startswith('SPIN') and coupon.get('used') == 1:
-                    conn.close()
-                    flash('This spin coupon has already been used. It is no longer valid.')
-                    return redirect(url_for('checkout'))
+                # ✅ If it's a spin coupon, make sure it's valid for this customer
+                if coupon_code.startswith('SPIN'):
+                    valid_spin = conn.execute(
+                        '''
+                        SELECT * FROM customer_spins 
+                        WHERE customer_phone = ? AND coupon_code = ?
+                        ''',
+                        (phone, coupon_code)
+                    ).fetchone()
 
-                # ✅ Apply discount
+                    if not valid_spin:
+                        conn.close()
+                        flash('❌ This spin coupon is not valid for you. Please spin again if needed.')
+                        return redirect(url_for('checkout'))
+
+                    if coupon['used'] == 1:
+                        conn.close()
+                        flash('❌ This spin coupon has already been used.')
+                        return redirect(url_for('checkout'))
+
+                # ✅ Apply discount logic
                 if coupon['type'] == 'percentage':
                     discount_amount = subtotal * (coupon['discount'] / 100)
-                    flash(f"Coupon applied! You saved {coupon['discount']}% off.")
+                    flash(f"✅ Coupon applied! You saved {coupon['discount']}% off.")
                 elif coupon['type'] == 'fixed':
                     discount_amount = coupon['discount']
-                    flash(f"Coupon applied! You saved PKR {discount_amount:.2f}.")
+                    flash(f"✅ Coupon applied! You saved PKR {discount_amount:.2f}.")
                 elif coupon['type'] == 'free_delivery':
                     delivery_fee = 0
-                    flash("Coupon applied! Free delivery activated.")
+                    flash("✅ Coupon applied! Free delivery activated.")
                 else:
-                    flash('Unknown coupon type.')
+                    flash('❌ Unknown coupon type.')
 
-                # ✅ Mark spin coupon as used now that it's valid
+                # ✅ Mark spin coupon as used
                 if coupon_code.startswith('SPIN'):
                     conn.execute(
                         'UPDATE coupons SET used = 1 WHERE code = ?',
@@ -330,7 +513,7 @@ def checkout():
 
             else:
                 conn.close()
-                flash('Invalid coupon code! Please try again.')
+                flash('❌ Invalid coupon code! Please try again.')
                 return redirect(url_for('checkout'))
 
         conn.close()
@@ -470,31 +653,29 @@ from datetime import datetime
 def admin_dashboard():
     conn = get_db_connection()
 
+    # ✅ Basic queries
     products = conn.execute('SELECT * FROM products').fetchall()
     banner = conn.execute('SELECT * FROM banners ORDER BY id DESC LIMIT 1').fetchone()
+    logo = conn.execute('SELECT * FROM logos ORDER BY id DESC LIMIT 1').fetchone()
     background = conn.execute('SELECT * FROM backgrounds ORDER BY id DESC LIMIT 1').fetchone()
     categories = conn.execute('SELECT * FROM categories').fetchall()
-
-    # ✅ Delivery fee
-    fee_row = conn.execute("SELECT value FROM settings WHERE key = 'delivery_fee'").fetchone()
-    delivery_fee = float(fee_row['value']) if fee_row else 0
-
-    # ✅ Top banner
-    banner_row = conn.execute("SELECT value FROM settings WHERE key = 'top_banner'").fetchone()
-    top_banner = banner_row['value'] if banner_row else ''
-
-    # ✅ Know Your Perfume image
     know_your_perfume = conn.execute(
         'SELECT * FROM know_your_perfume ORDER BY id DESC LIMIT 1'
     ).fetchone()
 
-    # ✅ Spin Wheel status
+    # ✅ Settings
+    fee_row = conn.execute("SELECT value FROM settings WHERE key = 'delivery_fee'").fetchone()
+    delivery_fee = float(fee_row['value']) if fee_row else 0
+
+    banner_row = conn.execute("SELECT value FROM settings WHERE key = 'top_banner'").fetchone()
+    top_banner = banner_row['value'] if banner_row else ''
+
     spin_row = conn.execute(
         "SELECT value FROM settings WHERE key = 'spin_wheel_enabled'"
     ).fetchone()
-    spin_enabled = bool(int(spin_row['value'])) if spin_row else True  # Default ON
+    spin_enabled = bool(int(spin_row['value'])) if spin_row else True
 
-    # ✅ Sales Analytics Snapshot
+    # ✅ Sales Analytics
     now = datetime.now()
     start_of_month = now.replace(day=1).strftime('%Y-%m-%d %H:%M:%S')
 
@@ -534,21 +715,28 @@ def admin_dashboard():
         (start_of_month,)
     ).fetchall()
 
+    # ✅ Spin Wheel History
+    spins = conn.execute(
+        'SELECT * FROM customer_spins ORDER BY created_at DESC'
+    ).fetchall()
+
     conn.close()
 
     return render_template(
         'admin_dashboard.html',
         products=products,
         banner=banner,
+        logo=logo,  # ✅ Pass logo to template!
         background=background,
         categories=categories,
-        delivery_fee=delivery_fee,
         know_your_perfume=know_your_perfume,
+        delivery_fee=delivery_fee,
         top_banner=top_banner,
-        spin_enabled=spin_enabled,      # ✅ Pass spin toggle status
+        spin_enabled=spin_enabled,
         total_orders=total_orders,
         total_revenue=total_revenue,
-        top_products=top_products
+        top_products=top_products,
+        spins=spins
     )
 
 @app.route('/admin/add_coupon', methods=['POST'])
@@ -568,6 +756,71 @@ def add_coupon():
     conn.close()
 
     flash('Coupon added successfully.')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/delete_banner/<int:banner_id>', methods=['POST'])
+@login_required
+def delete_banner(banner_id):
+    conn = get_db_connection()
+    conn.execute('DELETE FROM banners WHERE id = ?', (banner_id,))
+    conn.commit()
+    conn.close()
+    flash('✅ Hero banner deleted!')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/delete_logo/<int:logo_id>', methods=['POST'])
+@login_required
+def delete_logo(logo_id):
+    conn = get_db_connection()
+    # Get the logo filename first
+    logo = conn.execute('SELECT filename FROM logos WHERE id = ?', (logo_id,)).fetchone()
+
+    if logo:
+        # Delete the database row
+        conn.execute('DELETE FROM logos WHERE id = ?', (logo_id,))
+        conn.commit()
+        conn.close()
+
+        # Delete the file from disk
+        logo_path = os.path.join(app.root_path, 'static', 'uploads', 'logos', logo['filename'])
+        if os.path.exists(logo_path):
+            os.remove(logo_path)
+
+        flash('✅ Shop logo deleted!')
+    else:
+        conn.close()
+        flash('⚠️ Logo not found!')
+
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/delete_background/<int:background_id>', methods=['POST'])
+@login_required
+def delete_background(background_id):
+    conn = get_db_connection()
+    conn.execute('DELETE FROM backgrounds WHERE id = ?', (background_id,))
+    conn.commit()
+    conn.close()
+    flash('✅ Theme background deleted!')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/delete_kyp/<int:kyp_id>', methods=['POST'])
+@login_required
+def delete_kyp(kyp_id):
+    conn = get_db_connection()
+    conn.execute('DELETE FROM know_your_perfume WHERE id = ?', (kyp_id,))
+    conn.commit()
+    conn.close()
+    flash('✅ Know Your Perfume image deleted!')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/delete_coupon/<int:coupon_id>', methods=['POST'])
+@login_required
+def delete_coupon(coupon_id):
+    conn = get_db_connection()
+    conn.execute('DELETE FROM coupons WHERE id = ?', (coupon_id,))
+    conn.commit()
+    conn.close()
+    flash('✅ Coupon deleted!')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/toggle_spin_wheel', methods=['POST'])
@@ -962,19 +1215,39 @@ def invoice(order_id):
 @app.route('/admin/upload_logo', methods=['POST'])
 @login_required
 def upload_logo():
+    if 'logo' not in request.files:
+        flash('⚠️ No file part.')
+        return redirect(url_for('admin_dashboard'))
+
     logo_file = request.files['logo']
-    filename = secure_filename(logo_file.filename)
-    LOGO_FOLDER = 'static/uploads/logos/'
-    os.makedirs(LOGO_FOLDER, exist_ok=True)
-    logo_file.save(os.path.join(LOGO_FOLDER, filename))
 
-    conn = get_db_connection()
-    conn.execute('DELETE FROM logos')
-    conn.execute('INSERT INTO logos (filename) VALUES (?)', (filename,))
-    conn.commit()
-    conn.close()
+    if logo_file.filename == '':
+        flash('⚠️ No selected file.')
+        return redirect(url_for('admin_dashboard'))
 
-    flash('Shop logo uploaded.')
+    if logo_file:
+        filename = secure_filename(logo_file.filename)
+        LOGO_FOLDER = os.path.join(app.root_path, 'static', 'uploads', 'logos')
+        os.makedirs(LOGO_FOLDER, exist_ok=True)
+
+        # Remove old logo file if exists
+        conn = get_db_connection()
+        old_logo = conn.execute('SELECT filename FROM logos').fetchone()
+        if old_logo:
+            old_logo_path = os.path.join(LOGO_FOLDER, old_logo['filename'])
+            if os.path.exists(old_logo_path):
+                os.remove(old_logo_path)
+
+            conn.execute('DELETE FROM logos')
+
+        # Save new logo
+        logo_file.save(os.path.join(LOGO_FOLDER, filename))
+        conn.execute('INSERT INTO logos (filename) VALUES (?)', (filename,))
+        conn.commit()
+        conn.close()
+
+        flash('✅ Shop logo uploaded successfully!')
+
     return redirect(url_for('admin_dashboard'))
 
 # -----------------------------
@@ -989,7 +1262,6 @@ def get_db_connection():
     return conn
 
 def init_db():
-    # Always connect (even if DB exists)
     new_db = not os.path.exists('db.sqlite3')
     conn = get_db_connection()
 
@@ -1006,7 +1278,7 @@ def init_db():
             )
         ''')
 
-        # ✅ ORDERS table
+        # ✅ ORDERS table with status, tracking code, timestamps
         conn.execute('''
             CREATE TABLE orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1021,7 +1293,7 @@ def init_db():
             )
         ''')
 
-        # ✅ ORDER ITEMS table
+        # ✅ ORDER ITEMS table with price stored
         conn.execute('''
             CREATE TABLE order_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1034,7 +1306,7 @@ def init_db():
             )
         ''')
 
-        # ✅ Other tables
+        # ✅ BANNERS table
         conn.execute('''
             CREATE TABLE banners (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1043,6 +1315,7 @@ def init_db():
             )
         ''')
 
+        # ✅ CATEGORIES table
         conn.execute('''
             CREATE TABLE categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1050,6 +1323,7 @@ def init_db():
             )
         ''')
 
+        # ✅ BACKGROUNDS table
         conn.execute('''
             CREATE TABLE backgrounds (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1057,6 +1331,7 @@ def init_db():
             )
         ''')
 
+        # ✅ LOGOS table
         conn.execute('''
             CREATE TABLE logos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1064,7 +1339,7 @@ def init_db():
             )
         ''')
 
-        # ✅ COUPONS table with `used` column
+        # ✅ COUPONS table — with `used` column!
         conn.execute('''
             CREATE TABLE coupons (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1076,6 +1351,17 @@ def init_db():
             )
         ''')
 
+        # ✅ CUSTOMER SPINS table — NEW!
+        conn.execute('''
+            CREATE TABLE customer_spins (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_phone TEXT NOT NULL,
+                coupon_code TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # ✅ SETTINGS table
         conn.execute('''
             CREATE TABLE settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1084,6 +1370,7 @@ def init_db():
             )
         ''')
 
+        # ✅ KNOW YOUR PERFUME table
         conn.execute('''
             CREATE TABLE know_your_perfume (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1096,24 +1383,69 @@ def init_db():
             'INSERT INTO settings (key, value) VALUES (?, ?)',
             ('delivery_fee', '300')
         )
+
         conn.execute(
             'INSERT INTO settings (key, value) VALUES (?, ?)',
             ('top_banner', '15 Days Hassle-Free Return | Free Shipping on Orders Above PKR 3,000')
         )
 
-        print("✅ New DB created with all tables and default settings!")
+        # ✅ Insert default SPIN wheel coupons
+        spin_coupons = [
+            ('SPIN5', 5, 'percentage', 'Spin Wheel 5% Off'),
+            ('SPIN10', 10, 'percentage', 'Spin Wheel 10% Off'),
+            ('SPIN15', 15, 'percentage', 'Spin Wheel 15% Off'),
+            ('SPIN20', 20, 'percentage', 'Spin Wheel 20% Off')
+        ]
 
+        for code, discount, ctype, desc in spin_coupons:
+            conn.execute(
+                'INSERT INTO coupons (code, discount, type, description) VALUES (?, ?, ?, ?)',
+                (code, discount, ctype, desc)
+            )
+
+        conn.commit()
+        conn.close()
+        print("✅ Database initialized with all tables, SPIN coupons, `customer_spins`, constraints, and default settings!")
     else:
-        # ✅ Existing DB: add `used` column if missing
+        # ✅ If DB already exists, ensure `used` column exists in coupons table
         existing_columns = conn.execute('PRAGMA table_info(coupons)').fetchall()
         column_names = [col['name'] for col in existing_columns]
         if 'used' not in column_names:
             conn.execute('ALTER TABLE coupons ADD COLUMN used INTEGER DEFAULT 0')
             print("✅ Added missing `used` column to coupons table!")
 
-    conn.commit()
-    conn.close()
-    print("✅ Database initialized and up to date!")
+        # ✅ Ensure `customer_spins` table exists
+        existing_tables = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='customer_spins';"
+        ).fetchone()
+        if not existing_tables:
+            conn.execute('''
+                CREATE TABLE customer_spins (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer_phone TEXT NOT NULL,
+                    coupon_code TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            print("✅ Created missing `customer_spins` table!")
+
+        # ✅ Ensure SPIN coupons exist (INSERT OR IGNORE)
+        spin_coupons = [
+            ('SPIN5', 5, 'percentage', 'Spin Wheel 5% Off'),
+            ('SPIN10', 10, 'percentage', 'Spin Wheel 10% Off'),
+            ('SPIN15', 15, 'percentage', 'Spin Wheel 15% Off'),
+            ('SPIN20', 20, 'percentage', 'Spin Wheel 20% Off')
+        ]
+
+        for code, discount, ctype, desc in spin_coupons:
+            conn.execute(
+                'INSERT OR IGNORE INTO coupons (code, discount, type, description) VALUES (?, ?, ?, ?)',
+                (code, discount, ctype, desc)
+            )
+
+        conn.commit()
+        conn.close()
+        print("✅ Existing DB ensured SPIN coupons exist and `customer_spins` table checked!")
 
 # ✅ Context processor for Top Banner (add this above init_db, once)
 @app.context_processor
