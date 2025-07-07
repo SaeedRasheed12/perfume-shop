@@ -20,13 +20,11 @@
       {% if not background %} background: #fdfdfd; {% endif %}
     }
 
-    /* ✅ NAVBAR BRAND LOGO */
     .navbar-brand img {
       max-height: 80px;
       object-fit: contain;
     }
 
-    /* ✅ NAV LINKS HOVER EFFECT */
     .nav-link {
       color: #fff !important;
       transition: color 0.3s ease;
@@ -36,7 +34,6 @@
       color: gold !important;
     }
 
-    /* ✅ HERO + BANNER STYLES */
     .hero {
       position: relative;
       height: 100vh;
@@ -61,7 +58,6 @@
     }
 
     .hero-content p { font-size: 1.2rem; }
-
     .hero-content a.btn { margin-top: 1rem; }
 
     .hero video {
@@ -89,20 +85,28 @@
       padding: 10px;
     }
 
+    /* ✅ Updated scrolling top banner */
     .top-banner {
       background-color: #111;
       color: #FFD700;
       font-weight: bold;
+      overflow: hidden;
       white-space: nowrap;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
     }
-
-    .top-banner strong {
-      margin: 0 10px;
+    .top-banner-text {
+      display: inline-block;
+      padding-left: 100%;
+      animation: scroll-left 20s linear infinite;
+    }
+    @keyframes scroll-left {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
     }
 
     @media (max-width: 768px) {
+      .hero {
+        height: 50vh; /* shorter on mobile */
+      }
       .hero-content h1 { font-size: 2rem; }
       .hero-content p { font-size: 1rem; }
     }
@@ -119,24 +123,24 @@
     style="background: url('{{ url_for('static', filename='uploads/backgrounds/' ~ background.filename) }}') center/cover no-repeat; background-attachment: fixed;"
   {% endif %}>
 
-  <!-- ✅ TOP BANNER -->
+  <!-- ✅ Smooth Scrolling Top Banner -->
   <div class="text-center py-2 px-2 top-banner">
     {% if top_banner %}
-      {{ top_banner|safe }}
+      <div class="top-banner-text">{{ top_banner|safe }}</div>
     {% else %}
-      <strong>Free Delivery for Orders Above 4000</strong>
+      <div class="top-banner-text">
+        Free Delivery for Orders Above 4000 | 15 Days Return | New Arrivals Available
+      </div>
     {% endif %}
   </div>
 
   <!-- ✅ NAVBAR -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
-      <!-- ☰ OFFCANVAS TOGGLE -->
       <button class="btn btn-outline-light me-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
         ☰
       </button>
 
-      <!-- LOGO -->
       <a class="navbar-brand" href="/">
         {% if logo %}
           <img src="{{ url_for('static', filename='uploads/logos/' ~ logo.filename) }}" alt="Bin Ahmed Parfüm Logo">
@@ -145,7 +149,6 @@
         {% endif %}
       </a>
 
-      <!-- NAV LINKS -->
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -162,7 +165,6 @@
             </a>
           </li>
           <li class="nav-item"><a class="nav-link" href="/cart">🛒 Cart</a></li>
-          <!-- ✅ SEARCH BAR -->
           <li class="nav-item d-none d-lg-block">
             <form class="d-flex ms-3">
               <input class="form-control form-control-sm me-2" type="search" placeholder="Search" aria-label="Search">
