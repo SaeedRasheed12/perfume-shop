@@ -12,14 +12,28 @@
     <div class="text-center mb-4">
       <img src="{{ url_for('static', filename='uploads/' ~ know_your_perfume.filename) }}"
            alt="Fragrance Concentration Guide"
-           class="img-fluid rounded shadow">
+           class="img-fluid rounded-4 shadow"
+           style="max-width: 100%; height: auto;">
     </div>
   {% else %}
-    <p class="text-center text-muted mb-5">No guide has been uploaded yet. Please check back later!</p>
+    <p class="text-center text-muted mb-5">
+      No guide has been uploaded yet. Please check back later!
+    </p>
   {% endif %}
+
+  <p class="text-center text-muted mb-5">
+    Always choose a concentration that matches your mood, occasion, and lasting power preference.
+  </p>
 
   <div class="text-center">
     <a href="{{ url_for('index') }}" class="btn btn-dark">← Back to Shop</a>
   </div>
 </div>
+
+<!-- ✅ Small UX polish -->
+<style>
+  .btn-dark:hover {
+    opacity: 0.9;
+  }
+</style>
 {% endblock %}

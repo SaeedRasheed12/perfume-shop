@@ -8,18 +8,20 @@
     <video autoplay muted loop playsinline>
       <source src="{{ url_for('static', filename='uploads/banners/' ~ banner.video) }}" type="video/mp4">
     </video>
+    <div class="hero-overlay"></div>
     <div class="hero-content">
       <h1 class="fw-bold mb-3">Bin Ahmed Parfüm</h1>
       <p class="lead mb-4">Discover Your Signature Scent</p>
-      <a href="#products" class="btn btn-light px-4 py-2">Shop Now</a>
+      <a href="#products" class="btn btn-outline-light px-4 py-2">Shop Now</a>
     </div>
   </div>
 {% elif banner and banner.filename %}
   <div class="hero" style="background: url('{{ url_for('static', filename='uploads/banners/' ~ banner.filename) }}') center/cover no-repeat;">
+    <div class="hero-overlay"></div>
     <div class="hero-content">
       <h1 class="fw-bold mb-3">Bin Ahmed Parfüm</h1>
       <p class="lead mb-4">Discover Your Signature Scent</p>
-      <a href="#products" class="btn btn-light px-4 py-2">Shop Now</a>
+      <a href="#products" class="btn btn-outline-light px-4 py-2">Shop Now</a>
     </div>
   </div>
 {% else %}
@@ -27,17 +29,45 @@
     <div class="hero-content">
       <h1 class="fw-bold mb-3 text-white">Bin Ahmed Parfüm</h1>
       <p class="lead mb-4 text-white-50">Discover Your Signature Scent</p>
-      <a href="#products" class="btn btn-light px-4 py-2">Shop Now</a>
+      <a href="#products" class="btn btn-outline-light px-4 py-2">Shop Now</a>
     </div>
   </div>
 {% endif %}
 
 <!-- ✅ Hero CSS -->
 <style>
+  .hero {
+    position: relative;
+    height: 90vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .hero video {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+
+  .hero-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.4); /* Subtle dark overlay */
+    z-index: 1;
+  }
+
   .hero-content {
+    position: relative;
+    z-index: 2;
     max-width: 800px;
     margin: 0 auto;
     padding: 0 1rem;
+    color: #fff;
   }
 
   .hero-content h1 {
@@ -54,6 +84,12 @@
     font-weight: 600;
     font-size: 1rem;
     padding: 0.75rem 2rem;
+    border: 2px solid #fff;
+  }
+
+  .hero-content a.btn:hover {
+    background: #fff;
+    color: #000;
   }
 
   @media (max-width: 992px) {
@@ -69,6 +105,22 @@
       padding: 0.6rem 1.5rem;
     }
   }
+
+  /* ✅ Product Card Improvements */
+  .card {
+    border: none;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  }
+
+  .card-img-top {
+    height: 300px;
+    object-fit: cover;
+  }
 </style>
 
 <!-- ✅ Product Showcase -->
@@ -77,11 +129,10 @@
   <div class="row">
     {% for product in products %}
     <div class="col-md-4 mb-4">
-      <div class="card border-0 shadow-sm h-100">
+      <div class="card h-100">
         <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}"
              class="card-img-top"
-             alt="{{ product.name }} image"
-             style="object-fit: cover; height: 300px;">
+             alt="{{ product.name }}">
         <div class="card-body text-center d-flex flex-column">
           <h5 class="fw-semibold">{{ product.name }}</h5>
           <p class="text-muted mb-2">PKR {{ '%.2f'|format(product.price) }}</p>

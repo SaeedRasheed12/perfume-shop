@@ -1,46 +1,84 @@
 {% extends 'base.html' %}
-{% block content %}
 
-<h2>All Customer Orders</h2>
+{% block content %}
+<h2 class="mb-4">All Customer Orders</h2>
 
 {% if orders %}
   {% for entry in orders %}
-    <div class="card mb-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card mb-4 shadow-sm rounded-3">
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
         <div>
           <strong>Order #{{ entry.order.id }}</strong> —
-          {{ entry.order.name }} —
-          {{ entry.order.phone }}<br>
+          {{ entry.order.name }} — {{ entry.order.phone }}<br>
           {{ entry.order.address }}
         </div>
         <div>
-          <span class="badge bg-info text-dark">{{ entry.order.status }}</span>
+          {% if entry.order.status == 'Pending' %}
+            <span class="badge bg-warning text-dark">{{ entry.order.status }}</span>
+          {% elif entry.order.status == 'Shipped' %}
+            <span class="badge bg-primary">{{ entry.order.status }}</span>
+          {% elif entry.order.status == 'Delivered' %}
+            <span class="badge bg-success">{{ entry.order.status }}</span>
+          {% else %}
+            <span class="badge bg-secondary">{{ entry.order.status }}</span>
+          {% endif %}
         </div>
       </div>
+
       <div class="card-body">
         <ul class="list-group mb-3">
           {% for item in entry['items'] %}
           <li class="list-group-item d-flex justify-content-between">
             {{ item['name'] }} (x{{ item['quantity'] }})
-            <span>${{ '%.2f'|format(item['price'] * item['quantity']) }}</span>
+            <span>PKR {{ '%.2f'|format(item['price'] * item['quantity']) }}</span>
           </li>
           {% endfor %}
         </ul>
+
+        <div class="mb-3">
+          <strong>Tracking Code:</strong> {{ entry.order.tracking_code }}<br>
+          <strong>Coupon:</strong> {{ entry.order.coupon_code or 'N/A' }}<br>
+          <strong>Discount:</strong> PKR {{ '%.2f'|format(entry.order.discount) }}
+        </div>
+
         <form method="POST" action="{{ url_for('update_order_status', order_id=entry.order.id) }}" class="d-inline">
           <select name="status" class="form-select form-select-sm d-inline w-auto">
             <option value="Pending" {% if entry.order.status == 'Pending' %}selected{% endif %}>Pending</option>
             <option value="Shipped" {% if entry.order.status == 'Shipped' %}selected{% endif %}>Shipped</option>
             <option value="Delivered" {% if entry.order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
           </select>
-          <button type="submit" class="btn btn-sm btn-primary">Update</button>
+          <button type="submit" class="btn btn-sm btn-primary ms-2">Update</button>
         </form>
-        <a href="{{ url_for('delete_order', order_id=entry.order.id) }}" class="btn btn-sm btn-danger ms-2">Delete</a>
+
+        <a href="{{ url_for('invoice', order_id=entry.order.id) }}"
+           target="_blank"
+           class="btn btn-sm btn-success ms-2">
+          View Invoice
+        </a>
+
+        <a href="{{ url_for('delete_order', order_id=entry.order.id) }}"
+           class="btn btn-sm btn-danger ms-2"
+           onclick="return confirm('Are you sure you want to delete this order?');">
+          Delete
+        </a>
       </div>
     </div>
   {% endfor %}
 {% else %}
-  <p>No orders found.</p>
+  <p class="text-muted">No orders found.</p>
 {% endif %}
 
-<a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+<a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+
+<!-- ✅ Small UX improvements -->
+<style>
+  .card:hover {
+    transform: translateY(-3px);
+    transition: transform 0.3s ease;
+  }
+
+  .btn:hover {
+    opacity: 0.9;
+  }
+</style>
 {% endblock %}

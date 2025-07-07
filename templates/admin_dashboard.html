@@ -10,18 +10,59 @@
     and the Top Banner announcement.
   </p>
 
+    <!-- ✅ Sales Snapshot -->
+  <div class="row mb-5">
+    <div class="col-md-4 mb-3">
+      <div class="card text-center shadow-sm rounded-3">
+        <div class="card-body">
+          <h6 class="card-title fw-semibold">Total Orders This Month</h6>
+          <h3 class="mb-0">{{ total_orders }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <div class="card text-center shadow-sm rounded-3">
+        <div class="card-body">
+          <h6 class="card-title fw-semibold">Revenue This Month</h6>
+          <h3 class="mb-0">PKR {{ '%.2f'|format(total_revenue) }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <div class="card text-center shadow-sm rounded-3">
+        <div class="card-body">
+          <h6 class="card-title fw-semibold">Top-Selling Scents</h6>
+          {% if top_products %}
+            <ul class="list-group list-group-flush text-start">
+              {% for product in top_products %}
+                <li class="list-group-item d-flex justify-content-between">
+                  {{ product.name }}
+                  <span class="badge bg-dark">{{ product.total_sold }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-muted mb-0">No sales yet this month.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ✅ Quick Actions -->
-  <div class="mb-4">
-    <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-primary me-2">
+  <div class="mb-4 d-flex flex-wrap gap-2">
+    <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-primary">
       📦 View All Orders
     </a>
-    <a href="{{ url_for('admin_categories') }}" class="btn btn-outline-secondary me-2">
+    <a href="{{ url_for('admin_categories') }}" class="btn btn-outline-secondary">
       📂 Manage Categories
     </a>
   </div>
 
   <!-- ✅ Add New Product -->
-  <div class="card p-4 mb-5 shadow-sm">
+  <div class="card p-4 mb-5 shadow rounded-3">
     <h4 class="mb-3">Add New Product</h4>
     <form method="POST" enctype="multipart/form-data" action="{{ url_for('add_product') }}">
       <div class="mb-3">
@@ -78,7 +119,9 @@
                  width="60" class="rounded shadow-sm">
           </td>
           <td>
-            <a href="{{ url_for('delete_product', product_id=product.id) }}" class="btn btn-sm btn-danger">
+            <a href="{{ url_for('delete_product', product_id=product.id) }}"
+               class="btn btn-sm btn-danger"
+               onclick="return confirm('Are you sure you want to delete this product?');">
               Delete
             </a>
           </td>
@@ -89,7 +132,7 @@
   </div>
 
   <!-- ✅ Coupon Management -->
-  <div class="card p-4 mb-5 shadow-sm">
+  <div class="card p-4 mb-5 shadow rounded-3">
     <h4 class="mb-3">Add Coupon</h4>
     <form method="POST" action="{{ url_for('add_coupon') }}">
       <div class="mb-3">
@@ -116,8 +159,30 @@
     </form>
   </div>
 
+  <!-- ✅ Spin Wheel Feature Toggle -->
+  <div class="card p-4 mb-5 shadow rounded-3">
+    <h4 class="mb-3">Spin Wheel Feature</h4>
+    <form method="POST" action="{{ url_for('toggle_spin_wheel') }}">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="spinSwitch" name="enabled"
+               {% if spin_enabled %}checked{% endif %}>
+        <label class="form-check-label" for="spinSwitch">
+          Enable Spin Wheel Discount for Customers
+        </label>
+      </div>
+      <button type="submit" class="btn btn-dark mt-3">
+        {% if spin_enabled %}Disable{% else %}Enable{% endif %} Spin Wheel
+      </button>
+    </form>
+    {% if spin_enabled %}
+      <p class="text-success mt-2 fw-semibold">Spin Wheel is currently <strong>Enabled</strong>.</p>
+    {% else %}
+      <p class="text-danger mt-2 fw-semibold">Spin Wheel is currently <strong>Disabled</strong>.</p>
+    {% endif %}
+  </div>
+
   <!-- ✅ Delivery Fee -->
-  <div class="card p-4 mb-5 shadow-sm">
+  <div class="card p-4 mb-5 shadow rounded-3">
     <h4 class="mb-3">Set Delivery Fee</h4>
     <form method="POST" action="{{ url_for('update_delivery_fee') }}">
       <div class="mb-3">
@@ -129,12 +194,12 @@
       <button type="submit" class="btn btn-dark">Update Delivery Fee</button>
     </form>
     {% if delivery_fee %}
-      <p class="mt-2 text-success">Current Delivery Fee: PKR {{ delivery_fee }}</p>
+      <p class="mt-2 text-success fw-semibold">Current Delivery Fee: PKR {{ delivery_fee }}</p>
     {% endif %}
   </div>
 
   <!-- ✅ Upload Hero Banner -->
-  <div class="card p-4 mb-5 shadow-sm">
+  <div class="card p-4 mb-5 shadow rounded-3">
     <h4 class="mb-3">Upload Hero Banner</h4>
     <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_banner') }}">
       <div class="mb-3">
@@ -159,7 +224,7 @@
   </div>
 
   <!-- ✅ Upload Shop Logo -->
-  <div class="card p-4 mb-5 shadow-sm">
+  <div class="card p-4 mb-5 shadow rounded-3">
     <h4 class="mb-3">Upload Shop Logo</h4>
     <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_logo') }}">
       <div class="mb-3">
@@ -176,7 +241,7 @@
   </div>
 
   <!-- ✅ Know Your Perfume Upload -->
-  <div class="card p-4 mb-5 shadow-sm">
+  <div class="card p-4 mb-5 shadow rounded-3">
     <h4 class="mb-3">Upload "Know Your Perfume" Guide Image</h4>
     <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_know_your_perfume') }}">
       <div class="mb-3">
@@ -193,7 +258,7 @@
   </div>
 
   <!-- ✅ Top Banner Announcement -->
-  <div class="card p-4 mb-4 shadow-sm">
+  <div class="card p-4 mb-4 shadow rounded-3">
     <h4 class="mb-3">Update Top Banner Text</h4>
     <form method="POST" action="{{ url_for('update_top_banner') }}">
       <div class="mb-3">
@@ -205,7 +270,7 @@
   </div>
 
   <!-- ✅ Upload Background -->
-  <div class="card p-4 mb-4 shadow-sm">
+  <div class="card p-4 mb-4 shadow rounded-3">
     <h4 class="mb-3">Upload Background Theme</h4>
     <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_background') }}">
       <div class="mb-3">
@@ -221,4 +286,12 @@
     {% endif %}
   </div>
 </div>
+
+<!-- ✅ Optional: Card hover effect -->
+<style>
+  .card:hover {
+    transform: translateY(-3px);
+    transition: transform 0.3s ease;
+  }
+</style>
 {% endblock %}

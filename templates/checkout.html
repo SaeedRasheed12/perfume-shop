@@ -5,53 +5,55 @@
   <h2 class="mb-4 text-center">Checkout</h2>
 
   {% if total and total > 0 %}
-    <form method="POST" class="col-lg-6 mx-auto">
-      <div class="mb-3">
-        <label class="form-label">Full Name</label>
-        <input type="text" name="name" class="form-control" placeholder="Enter your full name" required>
-      </div>
+    <div class="card shadow rounded-4 p-4 col-lg-6 mx-auto">
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Full Name</label>
+          <input type="text" name="name" class="form-control" placeholder="Enter your full name" required>
+        </div>
 
-      <div class="mb-3">
-        <label class="form-label">Delivery Address</label>
-        <input type="text" name="address" class="form-control" placeholder="Street, City, ZIP" required>
-      </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Delivery Address</label>
+          <input type="text" name="address" class="form-control" placeholder="Street, City, ZIP" required>
+        </div>
 
-      <div class="mb-3">
-        <label class="form-label">Phone Number</label>
-        <input type="text" name="phone" class="form-control" placeholder="03XX-XXXXXXX" required>
-      </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Phone Number</label>
+          <input type="text" name="phone" class="form-control" placeholder="03XX-XXXXXXX" required>
+        </div>
 
-      <!-- ✅ Coupon Code Input -->
-      <div class="mb-3">
-        <label class="form-label">Coupon Code</label>
-        <input type="text" name="coupon_code" class="form-control" placeholder="Enter coupon code (optional)">
-      </div>
+        <!-- ✅ Coupon Code Input -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Coupon Code</label>
+          <input type="text" name="coupon_code" class="form-control" placeholder="Enter coupon code (optional)">
+        </div>
 
-      <div class="mt-4">
-        <h5 class="mb-2">Order Total:</h5>
-        <p class="fs-5">
-          Original Total: <strong>PKR {{ '%.2f'|format(total) }}</strong><br>
-          {% if discount and discount > 0 %}
-            Discount Applied: <span class="text-success">- PKR {{ '%.2f'|format(discount) }}</span><br>
-            Final Total: <strong>PKR {{ '%.2f'|format(total - discount) }}</strong>
-          {% else %}
-            <strong>No discount applied.</strong>
+        <div class="mt-4">
+          <h5 class="fw-bold mb-2">Order Total:</h5>
+          <p class="fs-5">
+            Original Total: <strong>PKR {{ '%.2f'|format(total) }}</strong><br>
+            {% if discount and discount > 0 %}
+              Discount Applied: <span class="text-success">- PKR {{ '%.2f'|format(discount) }}</span><br>
+              Final Total: <strong>PKR {{ '%.2f'|format(total - discount) }}</strong>
+            {% else %}
+              <strong>No discount applied.</strong>
+            {% endif %}
+          </p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="alert alert-warning mt-3">
+              {% for msg in messages %}
+                {{ msg }}<br>
+              {% endfor %}
+            </div>
           {% endif %}
-        </p>
-      </div>
+        {% endwith %}
 
-      {% with messages = get_flashed_messages() %}
-        {% if messages %}
-          <div class="alert alert-warning mt-3">
-            {% for msg in messages %}
-              {{ msg }}<br>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
-
-      <button type="submit" class="btn btn-dark btn-lg mt-3 w-100">Place Order</button>
-    </form>
+        <button type="submit" class="btn btn-dark btn-lg mt-3 w-100">Place Order</button>
+      </form>
+    </div>
   {% else %}
     <div class="text-center py-5">
       <h4>Your cart is empty!</h4>
@@ -59,4 +61,11 @@
     </div>
   {% endif %}
 </div>
+
+<!-- ✅ Subtle UX polish -->
+<style>
+  .btn-dark:hover {
+    opacity: 0.9;
+  }
+</style>
 {% endblock %}

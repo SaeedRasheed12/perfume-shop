@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash , render_template_string
+from datetime import datetime, timedelta
 import sqlite3
 import os
 from werkzeug.utils import secure_filename
@@ -103,31 +104,174 @@ def remove_from_cart(product_id):
     flash('Item removed from cart.')
     return redirect(url_for('cart'))
 
+@app.route('/spin', methods=['GET'])
+def spin():
+    import random
+
+    conn = get_db_connection()
+    # ✅ 1) Check spin setting
+    row = conn.execute(
+        "SELECT value FROM settings WHERE key = 'spin_wheel_enabled'"
+    ).fetchone()
+    spin_enabled = bool(int(row['value'])) if row else True
+
+    if not spin_enabled:
+        conn.close()
+        return render_template_string("""
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <title>Spin Wheel Disabled</title>
+            <style>
+              body { font-family: Arial, sans-serif; background: #f4f4f4; }
+              .box {
+                max-width: 500px; margin: 100px auto; padding: 40px; background: #fff;
+                text-align: center; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+              }
+              .box h2 { color: #dc3545; }
+              .back-btn {
+                display: inline-block; margin-top: 20px; background: #333; color: #fff;
+                padding: 10px 20px; text-decoration: none; border-radius: 5px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="box">
+              <h2>🚫 Spin Wheel is Disabled</h2>
+              <p>Check back later to try your luck again!</p>
+              <a href="{{ url_for('cart') }}" class="back-btn">Back to Cart</a>
+            </div>
+          </body>
+          </html>
+        """)
+
+    # ✅ 2) Already spun in session? Reuse same coupon
+    if 'spin_coupon' in session:
+        coupon_code = session['spin_coupon']
+        # Check if this coupon was used
+        row = conn.execute(
+            "SELECT used FROM coupons WHERE code = ?",
+            (coupon_code,)
+        ).fetchone()
+        if row and row['used']:
+            conn.close()
+            return render_template_string("""
+              <h2>🚫 This spin coupon was already used!</h2>
+              <a href="{{ url_for('cart') }}">Back to Cart</a>
+            """)
+        discount_percent = int(''.join(filter(str.isdigit, coupon_code)))
+    else:
+        # ✅ 3) Generate new spin coupon
+        possible_discounts = [5, 10, 15, 20]
+        discount_percent = random.choice(possible_discounts)
+        coupon_code = f"SPIN{discount_percent}"
+
+        # Check if same spin coupon already exists and is unused
+        existing = conn.execute(
+            'SELECT used FROM coupons WHERE code = ?', (coupon_code,)
+        ).fetchone()
+
+        if not existing:
+            conn.execute(
+                'INSERT INTO coupons (code, discount, type, description, used) VALUES (?, ?, ?, ?, ?)',
+                (coupon_code, discount_percent, 'percentage', 'Spin the Wheel Reward', 0)
+            )
+            conn.commit()
+        elif existing and existing['used']:
+            conn.close()
+            return render_template_string("""
+              <h2>🚫 This spin coupon was already used!</h2>
+              <a href="{{ url_for('cart') }}">Back to Cart</a>
+            """)
+
+        session['spin_coupon'] = coupon_code
+
+    conn.close()
+
+    return render_template_string("""
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <title>Discount Won</title>
+        <style>
+          body { font-family: Arial, sans-serif; background: #f4f4f4; }
+          .box {
+            max-width: 500px; margin: 100px auto; padding: 40px; background: #fff;
+            text-align: center; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+          }
+          .box h2 { color: #28a745; }
+          .box p { font-size: 18px; }
+          .back-btn {
+            display: inline-block; margin-top: 20px; background: #333; color: #fff;
+            padding: 10px 20px; text-decoration: none; border-radius: 5px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="box">
+          <h2>🎉 Congrats! You won {{ discount }}% off!</h2>
+          <p>Your coupon code:</p>
+          <p><strong>{{ coupon }}</strong></p>
+          <p>Use this at checkout to save money.</p>
+          <a href="{{ url_for('cart') }}" class="back-btn">Back to Cart</a>
+        </div>
+      </body>
+      </html>
+    """, discount=discount_percent, coupon=coupon_code)
+
 @app.route('/track', methods=['GET', 'POST'])
 def track_order():
-    order = None
+    orders_with_items = []
+    tracking_code = ""
 
     if request.method == 'POST':
         tracking_code = request.form['tracking_code'].strip()
 
         conn = get_db_connection()
-        order = conn.execute(
+        orders = conn.execute(
             'SELECT * FROM orders WHERE tracking_code = ?', (tracking_code,)
-        ).fetchone()
+        ).fetchall()
+
+        for order in orders:
+            # ✅ Get order items
+            items = conn.execute(
+                '''
+                SELECT oi.quantity, p.name, p.price
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = ?
+                ''',
+                (order['id'],)
+            ).fetchall()
+
+            # ✅ Calculate expected delivery date (3 days from created_at)
+            created_at = datetime.strptime(order['created_at'], '%Y-%m-%d %H:%M:%S')
+            expected_date = created_at + timedelta(days=3)
+
+            orders_with_items.append({
+                'order': order,
+                'items': items,
+                'expected_date': expected_date.strftime('%Y-%m-%d')
+            })
+
         conn.close()
 
-        if not order:
+        if not orders_with_items:
             flash('Tracking code not found.')
 
-    return render_template('track.html', order=order)
+    return render_template(
+        'track.html',
+        orders=orders_with_items,
+        tracking_code=tracking_code
+    )
 
 @app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     cart = session.get('cart', [])
     subtotal = sum(item['price'] * item['quantity'] for item in cart)
     discount_amount = 0
+    delivery_fee = 0
     coupon_code = ''
-    delivery_fee = 0  # default
 
     if request.method == 'POST':
         if not cart:
@@ -137,11 +281,18 @@ def checkout():
         name = request.form['name']
         address = request.form['address']
         phone = request.form['phone']
+
+        # ✅ Always UPPERCASE input
         coupon_code = request.form.get('coupon_code', '').strip().upper()
 
+        # ✅ Use spin coupon from session if empty
+        if not coupon_code and 'spin_coupon' in session:
+            coupon_code = session.pop('spin_coupon').strip().upper()
+
         conn = get_db_connection()
-        # ✅ Pull delivery fee from settings if it exists
-        delivery_row = conn.execute("SELECT value FROM settings WHERE key = 'delivery_fee'").fetchone()
+        delivery_row = conn.execute(
+            "SELECT value FROM settings WHERE key = 'delivery_fee'"
+        ).fetchone()
         delivery_fee = float(delivery_row['value']) if delivery_row else 0
 
         if coupon_code:
@@ -150,6 +301,13 @@ def checkout():
             ).fetchone()
 
             if coupon:
+                # ✅ Block if spin coupon was already used
+                if coupon_code.startswith('SPIN') and coupon.get('used') == 1:
+                    conn.close()
+                    flash('This spin coupon has already been used. It is no longer valid.')
+                    return redirect(url_for('checkout'))
+
+                # ✅ Apply discount
                 if coupon['type'] == 'percentage':
                     discount_amount = subtotal * (coupon['discount'] / 100)
                     flash(f"Coupon applied! You saved {coupon['discount']}% off.")
@@ -161,6 +319,15 @@ def checkout():
                     flash("Coupon applied! Free delivery activated.")
                 else:
                     flash('Unknown coupon type.')
+
+                # ✅ Mark spin coupon as used now that it's valid
+                if coupon_code.startswith('SPIN'):
+                    conn.execute(
+                        'UPDATE coupons SET used = 1 WHERE code = ?',
+                        (coupon_code,)
+                    )
+                    conn.commit()
+
             else:
                 conn.close()
                 flash('Invalid coupon code! Please try again.')
@@ -170,10 +337,13 @@ def checkout():
 
         final_total = max(0, subtotal + delivery_fee - discount_amount)
 
-        tracking_code = generate_tracking_code()
+        # ✅ One tracking code per session
+        tracking_code = session.get('tracking_code')
+        if not tracking_code:
+            tracking_code = generate_tracking_code()
+            session['tracking_code'] = tracking_code
 
         conn = get_db_connection()
-        # ✅ Save coupon, discount, tracking code
         conn.execute(
             '''
             INSERT INTO orders (name, address, phone, tracking_code, coupon_code, discount)
@@ -185,18 +355,22 @@ def checkout():
 
         for item in cart:
             conn.execute(
-                'INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)',
-                (order_id, item['id'], item['quantity'])
+                '''
+                INSERT INTO order_items (order_id, product_id, quantity, price)
+                VALUES (?, ?, ?, ?)
+                ''',
+                (order_id, item['id'], item['quantity'], item['price'])
             )
 
         conn.commit()
         conn.close()
 
+        # ✅ Clear cart and spin coupon session
         session.pop('cart', None)
+        session.pop('spin_coupon', None)
 
-        return redirect(url_for('invoice', order_id=order_id))
+        return redirect(url_for('thankyou', tracking_code=tracking_code, order_id=order_id))
 
-    # GET request: show checkout page
     return render_template(
         'checkout.html',
         subtotal=subtotal,
@@ -208,7 +382,8 @@ def checkout():
 @app.route('/thankyou')
 def thankyou():
     tracking_code = request.args.get('tracking_code')
-    return render_template('thankyou.html', tracking_code=tracking_code)
+    order_id = request.args.get('order_id')
+    return render_template('thankyou.html', tracking_code=tracking_code, order_id=order_id)
 
 # -----------------------------
 # ✉️ Static pages
@@ -288,6 +463,8 @@ def set_delivery_fee():  # <-- ✅ different name, same endpoint URL
     flash(f'Delivery fee updated to PKR {fee}')
     return redirect(url_for('admin_dashboard'))
 
+from datetime import datetime
+
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
@@ -298,18 +475,64 @@ def admin_dashboard():
     background = conn.execute('SELECT * FROM backgrounds ORDER BY id DESC LIMIT 1').fetchone()
     categories = conn.execute('SELECT * FROM categories').fetchall()
 
-    # ✅ Fetch current delivery fee
+    # ✅ Delivery fee
     fee_row = conn.execute("SELECT value FROM settings WHERE key = 'delivery_fee'").fetchone()
     delivery_fee = float(fee_row['value']) if fee_row else 0
 
-    # ✅ Fetch current Top Banner announcement text
+    # ✅ Top banner
     banner_row = conn.execute("SELECT value FROM settings WHERE key = 'top_banner'").fetchone()
     top_banner = banner_row['value'] if banner_row else ''
 
-    # ✅ Fetch Know Your Perfume image
+    # ✅ Know Your Perfume image
     know_your_perfume = conn.execute(
         'SELECT * FROM know_your_perfume ORDER BY id DESC LIMIT 1'
     ).fetchone()
+
+    # ✅ Spin Wheel status
+    spin_row = conn.execute(
+        "SELECT value FROM settings WHERE key = 'spin_wheel_enabled'"
+    ).fetchone()
+    spin_enabled = bool(int(spin_row['value'])) if spin_row else True  # Default ON
+
+    # ✅ Sales Analytics Snapshot
+    now = datetime.now()
+    start_of_month = now.replace(day=1).strftime('%Y-%m-%d %H:%M:%S')
+
+    total_orders = conn.execute(
+        "SELECT COUNT(*) FROM orders WHERE created_at >= ?", (start_of_month,)
+    ).fetchone()[0]
+
+    total_revenue = conn.execute(
+        '''
+        SELECT IFNULL(SUM(
+            (SELECT SUM(oi.quantity * oi.price) FROM order_items oi WHERE oi.order_id = o.id)
+            + (
+              CASE
+                WHEN o.coupon_code = 'FREEDELIVERY' THEN 0
+                ELSE IFNULL((SELECT value FROM settings WHERE key = 'delivery_fee'), 0)
+              END
+            )
+            - o.discount
+        ), 0)
+        FROM orders o
+        WHERE o.created_at >= ?
+        ''',
+        (start_of_month,)
+    ).fetchone()[0]
+
+    top_products = conn.execute(
+        '''
+        SELECT p.name, SUM(oi.quantity) as total_sold
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        JOIN orders o ON oi.order_id = o.id
+        WHERE o.created_at >= ?
+        GROUP BY p.id
+        ORDER BY total_sold DESC
+        LIMIT 5
+        ''',
+        (start_of_month,)
+    ).fetchall()
 
     conn.close()
 
@@ -319,9 +542,13 @@ def admin_dashboard():
         banner=banner,
         background=background,
         categories=categories,
-        delivery_fee=delivery_fee,             # ✅ Delivery fee
-        know_your_perfume=know_your_perfume,   # ✅ Guide image
-        top_banner=top_banner                  # ✅ New! Top Banner text
+        delivery_fee=delivery_fee,
+        know_your_perfume=know_your_perfume,
+        top_banner=top_banner,
+        spin_enabled=spin_enabled,      # ✅ Pass spin toggle status
+        total_orders=total_orders,
+        total_revenue=total_revenue,
+        top_products=top_products
     )
 
 @app.route('/admin/add_coupon', methods=['POST'])
@@ -341,6 +568,31 @@ def add_coupon():
     conn.close()
 
     flash('Coupon added successfully.')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/toggle_spin_wheel', methods=['POST'])
+@login_required
+def toggle_spin_wheel():
+    # ✅ If 'enabled' is in form, checkbox was checked
+    enabled = 'enabled' in request.form
+
+    conn = get_db_connection()
+    conn.execute(
+        '''
+        INSERT INTO settings (key, value)
+        VALUES ('spin_wheel_enabled', ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        ''',
+        (1 if enabled else 0,)
+    )
+    conn.commit()
+    conn.close()
+
+    if enabled:
+        flash('✅ Spin Wheel feature ENABLED successfully!')
+    else:
+        flash('🚫 Spin Wheel feature DISABLED successfully!')
+
     return redirect(url_for('admin_dashboard'))
 
 # -----------------------------
@@ -664,7 +916,11 @@ def invoice(order_id):
     # ✅ Get order details
     order = conn.execute('SELECT * FROM orders WHERE id = ?', (order_id,)).fetchone()
 
-    # ✅ Get ordered items
+    if not order:
+        conn.close()
+        return "Order not found.", 404
+
+    # ✅ Get items for the order
     items = conn.execute('''
         SELECT oi.quantity, p.name, p.price
         FROM order_items oi
@@ -672,19 +928,23 @@ def invoice(order_id):
         WHERE oi.order_id = ?
     ''', (order_id,)).fetchall()
 
-    # ✅ Calculate subtotal
     subtotal = sum(item['price'] * item['quantity'] for item in items)
 
-    # ✅ Get delivery fee (unless coupon disables it)
-    delivery_fee = 0
+    # ✅ Get delivery fee
     if order['coupon_code'] and order['coupon_code'].upper() == 'FREEDELIVERY':
         delivery_fee = 0
     else:
-        settings_row = conn.execute("SELECT value FROM settings WHERE key = 'delivery_fee'").fetchone()
-        delivery_fee = float(settings_row['value']) if settings_row else 0
+        row = conn.execute("SELECT value FROM settings WHERE key = 'delivery_fee'").fetchone()
+        delivery_fee = float(row['value']) if row else 0
 
-    # ✅ Final total: subtotal + delivery - discount
-    final_total = max(0, subtotal + delivery_fee - order['discount'])
+    discount = float(order['discount']) if order['discount'] else 0
+
+    final_total = max(0, subtotal + delivery_fee - discount)
+
+    # ✅ Expected delivery date = created_at + 3 days
+    from datetime import datetime, timedelta
+    created_at = datetime.strptime(order['created_at'], '%Y-%m-%d %H:%M:%S')
+    expected_date = created_at + timedelta(days=3)
 
     conn.close()
 
@@ -694,7 +954,9 @@ def invoice(order_id):
         items=items,
         subtotal=subtotal,
         delivery_fee=delivery_fee,
-        final_total=final_total
+        discount=discount,
+        final_total=final_total,
+        expected_date=expected_date.strftime('%Y-%m-%d')
     )
 
 @app.route('/admin/upload_logo', methods=['POST'])
@@ -718,33 +980,44 @@ def upload_logo():
 # -----------------------------
 # ⚙️ Initialize Database
 # -----------------------------
-def init_db():
-    if not os.path.exists('db.sqlite3'):
-        conn = get_db_connection()
+import os
+import sqlite3
 
+def get_db_connection():
+    conn = sqlite3.connect('db.sqlite3')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    # Always connect (even if DB exists)
+    new_db = not os.path.exists('db.sqlite3')
+    conn = get_db_connection()
+
+    if new_db:
         # ✅ PRODUCTS table
         conn.execute('''
             CREATE TABLE products (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
+                name TEXT NOT NULL,
                 description TEXT,
-                price REAL,
+                price REAL NOT NULL,
                 image TEXT,
                 category_id INTEGER
             )
         ''')
 
-        # ✅ ORDERS table with STATUS, TRACKING CODE, COUPON CODE, DISCOUNT
+        # ✅ ORDERS table
         conn.execute('''
             CREATE TABLE orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
-                address TEXT,
-                phone TEXT,
+                name TEXT NOT NULL,
+                address TEXT NOT NULL,
+                phone TEXT NOT NULL,
                 status TEXT DEFAULT 'Pending',
-                tracking_code TEXT,
+                tracking_code TEXT NOT NULL,
                 coupon_code TEXT,
-                discount REAL DEFAULT 0
+                discount REAL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
 
@@ -752,13 +1025,16 @@ def init_db():
         conn.execute('''
             CREATE TABLE order_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                order_id INTEGER,
-                product_id INTEGER,
-                quantity INTEGER
+                order_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                quantity INTEGER NOT NULL,
+                price REAL NOT NULL,
+                FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             )
         ''')
 
-        # ✅ BANNERS table (image & optional video)
+        # ✅ Other tables
         conn.execute('''
             CREATE TABLE banners (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -767,7 +1043,6 @@ def init_db():
             )
         ''')
 
-        # ✅ CATEGORIES table
         conn.execute('''
             CREATE TABLE categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -775,7 +1050,6 @@ def init_db():
             )
         ''')
 
-        # ✅ BACKGROUNDS table
         conn.execute('''
             CREATE TABLE backgrounds (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -783,7 +1057,6 @@ def init_db():
             )
         ''')
 
-        # ✅ LOGOS table for shop logo
         conn.execute('''
             CREATE TABLE logos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -791,18 +1064,18 @@ def init_db():
             )
         ''')
 
-        # ✅ COUPONS table
+        # ✅ COUPONS table with `used` column
         conn.execute('''
             CREATE TABLE coupons (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 code TEXT UNIQUE NOT NULL,
                 discount REAL NOT NULL,
                 type TEXT CHECK(type IN ('percentage', 'fixed', 'free_delivery')),
-                description TEXT
+                description TEXT,
+                used INTEGER DEFAULT 0
             )
         ''')
 
-        # ✅ SETTINGS table for delivery fee & banner text
         conn.execute('''
             CREATE TABLE settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -811,7 +1084,6 @@ def init_db():
             )
         ''')
 
-        # ✅ KNOW YOUR PERFUME table
         conn.execute('''
             CREATE TABLE know_your_perfume (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -819,22 +1091,29 @@ def init_db():
             )
         ''')
 
-        # ✅ Insert default delivery fee
+        # ✅ Insert default settings
         conn.execute(
             'INSERT INTO settings (key, value) VALUES (?, ?)',
             ('delivery_fee', '300')
         )
-
-        # ✅ Insert default Top Banner text
         conn.execute(
             'INSERT INTO settings (key, value) VALUES (?, ?)',
             ('top_banner', '15 Days Hassle-Free Return | Free Shipping on Orders Above PKR 3,000')
         )
 
-        conn.commit()
-        conn.close()
-        print("✅ Database initialized with all tables, delivery fee & top banner settings!")
+        print("✅ New DB created with all tables and default settings!")
 
+    else:
+        # ✅ Existing DB: add `used` column if missing
+        existing_columns = conn.execute('PRAGMA table_info(coupons)').fetchall()
+        column_names = [col['name'] for col in existing_columns]
+        if 'used' not in column_names:
+            conn.execute('ALTER TABLE coupons ADD COLUMN used INTEGER DEFAULT 0')
+            print("✅ Added missing `used` column to coupons table!")
+
+    conn.commit()
+    conn.close()
+    print("✅ Database initialized and up to date!")
 
 # ✅ Context processor for Top Banner (add this above init_db, once)
 @app.context_processor

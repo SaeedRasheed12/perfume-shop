@@ -8,19 +8,27 @@
     <div class="row">
       {% for product in products %}
       <div class="col-md-4 mb-4">
-        <div class="card border-0 shadow-sm h-100">
+        <div class="card border-0 shadow rounded-4 h-100 wishlist-card">
           <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}"
-               class="card-img-top"
+               class="card-img-top rounded-top"
                alt="{{ product.name }}"
                style="object-fit: cover; height: 300px;">
-          <div class="card-body text-center">
+          <div class="card-body text-center d-flex flex-column">
             <h5 class="fw-semibold">{{ product.name }}</h5>
-            <p class="text-muted mb-2">PKR {{ '%.2f'|format(product.price) }}</p>
-            <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-outline-dark btn-sm mb-2">View Details</a>
-            <br>
-            <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-dark btn-sm mb-2">🛒 Add to Cart</a>
-            <br>
-            <a href="{{ url_for('remove_from_wishlist', product_id=product.id) }}" class="btn btn-outline-danger btn-sm">Remove</a>
+            <p class="text-muted mb-3">PKR {{ '%.2f'|format(product.price) }}</p>
+            <a href="{{ url_for('product_detail', product_id=product.id) }}" 
+               class="btn btn-outline-dark btn-sm mb-2 w-100">
+              View Details
+            </a>
+            <a href="{{ url_for('add_to_cart', product_id=product.id) }}" 
+               class="btn btn-dark btn-sm mb-2 w-100">
+              🛒 Add to Cart
+            </a>
+            <a href="{{ url_for('remove_from_wishlist', product_id=product.id) }}" 
+               class="btn btn-outline-danger btn-sm w-100"
+               onclick="return confirm('Remove this item from your wishlist?');">
+              Remove
+            </a>
           </div>
         </div>
       </div>
@@ -28,8 +36,34 @@
     </div>
   {% else %}
     <div class="alert alert-info">
-      Your wishlist is empty. <a href="/">Start shopping now!</a>
+      Your wishlist is empty. <a href="/" class="text-decoration-none">Start shopping now!</a>
     </div>
   {% endif %}
 </div>
+
+<!-- ✅ Subtle UX polish -->
+<style>
+  .wishlist-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .wishlist-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+  }
+
+  .btn-outline-dark:hover {
+    background: #000;
+    color: #fff;
+  }
+
+  .btn-dark:hover {
+    opacity: 0.9;
+  }
+
+  .btn-outline-danger:hover {
+    background: #dc3545;
+    color: #fff;
+  }
+</style>
 {% endblock %}

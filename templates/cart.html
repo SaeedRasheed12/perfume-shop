@@ -5,8 +5,8 @@
   <h2 class="mb-4">Your Cart</h2>
 
   {% if cart %}
-    <div class="table-responsive">
-      <table class="table table-striped align-middle">
+    <div class="table-responsive shadow rounded-4 overflow-hidden">
+      <table class="table table-striped align-middle mb-0">
         <thead class="table-dark">
           <tr>
             <th>Item</th>
@@ -22,7 +22,9 @@
             <td class="text-center">{{ item.quantity }}</td>
             <td class="text-end">PKR {{ '%.2f'|format(item.price * item.quantity) }}</td>
             <td class="text-center">
-              <a href="{{ url_for('remove_from_cart', product_id=item.id) }}" class="btn btn-sm btn-outline-danger">
+              <a href="{{ url_for('remove_from_cart', product_id=item.id) }}"
+                 class="btn btn-sm btn-outline-danger"
+                 onclick="return confirm('Remove this item from your cart?');">
                 Remove
               </a>
             </td>
@@ -32,14 +34,28 @@
       </table>
     </div>
 
-    <div class="text-end">
-      <h4 class="mt-4">Total: PKR {{ '%.2f'|format(total) }}</h4>
-      <a href="{{ url_for('checkout') }}" class="btn btn-dark btn-lg mt-3">Proceed to Checkout</a>
+    <!-- ✅ Total, Spin & Checkout -->
+    <div class="text-end mt-4">
+      <h4 class="fw-bold">Total: <span class="text-primary">PKR {{ '%.2f'|format(total) }}</span></h4>
+
+      <!-- 🎉 Direct Spin Button -->
+      <a href="{{ url_for('spin') }}" class="btn btn-outline-success btn-sm mt-2 mb-3">
+        🎉 Click to Spin & Get Discount!
+      </a>
+
+      <a href="{{ url_for('checkout') }}" class="btn btn-dark btn-lg">Proceed to Checkout</a>
     </div>
 
   {% else %}
-    <p class="lead">Your cart is empty.</p>
+    <div class="alert alert-info shadow-sm">Your cart is empty.</div>
     <a href="{{ url_for('index') }}" class="btn btn-outline-dark mt-3">Continue Shopping</a>
   {% endif %}
 </div>
+
+<!-- ✅ Subtle hover styles -->
+<style>
+  .btn-outline-danger:hover { background: #dc3545; color: #fff; }
+  .btn-outline-success:hover { background: #198754; color: #fff; }
+  .table-striped tbody tr:hover { background-color: #f9f9f9; }
+</style>
 {% endblock %}

@@ -2,22 +2,57 @@
 
 {% block content %}
 <div class="container py-5">
-  <h2 class="mb-4">Track Your Order</h2>
+  <h2 class="mb-4">Track Your Orders</h2>
 
-  <form method="POST" class="mb-4">
-    <label class="form-label">Enter Tracking Code:</label>
-    <input type="text" name="tracking_code" class="form-control mb-2" required placeholder="e.g. BA123456">
-    <button type="submit" class="btn btn-primary">Track Order</button>
-  </form>
+  <div class="card shadow rounded-4 p-4 mb-4 col-md-6 col-lg-5">
+    <form method="POST">
+      <label class="form-label fw-semibold">Enter Tracking Code:</label>
+      <input type="text" name="tracking_code" value="{{ tracking_code or '' }}" class="form-control mb-3" required placeholder="e.g. BA123456">
+      <button type="submit" class="btn btn-dark w-100">Track Orders</button>
+    </form>
+  </div>
 
-  {% if order %}
-    <div class="card p-4">
-      <h5>Order Details</h5>
-      <p><strong>Name:</strong> {{ order.name }}</p>
-      <p><strong>Address:</strong> {{ order.address }}</p>
-      <p><strong>Status:</strong> {{ order.status }}</p>
-      <p><strong>Tracking Code:</strong> {{ order.tracking_code }}</p>
-    </div>
+  {% if orders %}
+    {% for entry in orders %}
+      <div class="card shadow rounded-4 p-4 mb-4">
+        <h5 class="fw-bold mb-3">
+          Order #{{ entry.order.id }} — Placed: {{ entry.order.created_at }}
+        </h5>
+        <p><strong>Name:</strong> {{ entry.order.name }}</p>
+        <p><strong>Address:</strong> {{ entry.order.address }}</p>
+        <p>
+          <strong>Status:</strong>
+          <span class="badge bg-info text-dark">{{ entry.order.status }}</span>
+        </p>
+        <p><strong>Tracking Code:</strong> {{ entry.order.tracking_code }}</p>
+
+        <!-- ✅ Expected Delivery Date -->
+        {% if entry.expected_date %}
+          <p>
+            <strong>Expected Delivery Date:</strong>
+            <span class="text-success">{{ entry.expected_date }}</span>
+          </p>
+        {% endif %}
+
+        <ul class="list-group mb-3">
+          {% for item in entry["items"] %}
+          <li class="list-group-item d-flex justify-content-between">
+            {{ item.name }} (x{{ item.quantity }})
+            <span>PKR {{ '%.2f'|format(item.price * item.quantity) }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+  {% elif tracking_code %}
+    <div class="alert alert-warning col-md-6 col-lg-5">No orders found for this tracking code.</div>
   {% endif %}
 </div>
+
+<!-- ✅ Subtle UX polish -->
+<style>
+  .btn-dark:hover {
+    opacity: 0.9;
+  }
+</style>
 {% endblock %}
