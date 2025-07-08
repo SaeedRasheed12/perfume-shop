@@ -306,7 +306,7 @@ def spin():
                 """)
 
         # ✅ 3) Generate new spin coupon
-        possible_discounts = [5, 10, 15, 20]
+        possible_discounts = [5, 7, 9, 11, 13, 15]
         discount_percent = random.choice(possible_discounts)
         coupon_code = f'SPIN{discount_percent}'
 
@@ -1677,9 +1677,11 @@ def init_db():
         # ✅ SPIN Coupons
         spin_coupons = [
             ('SPIN5', 5, 'percentage', 'Spin Wheel 5% Off'),
-            ('SPIN10', 10, 'percentage', 'Spin Wheel 10% Off'),
-            ('SPIN15', 15, 'percentage', 'Spin Wheel 15% Off'),
-            ('SPIN20', 20, 'percentage', 'Spin Wheel 20% Off')
+            ('SPIN7', 7, 'percentage', 'Spin Wheel 7% Off'),
+            ('SPIN9', 9, 'percentage', 'Spin Wheel 9% Off'),
+            ('SPIN11', 11, 'percentage', 'Spin Wheel 11% Off'),
+            ('SPIN13', 13, 'percentage', 'Spin Wheel 13% Off'),
+            ('SPIN15', 15, 'percentage', 'Spin Wheel 15% Off')
         ]
         for code, discount, ctype, desc in spin_coupons:
             conn.execute(
@@ -1752,9 +1754,11 @@ def init_db():
         # ✅ SPIN Coupons
         spin_coupons = [
             ('SPIN5', 5, 'percentage', 'Spin Wheel 5% Off'),
-            ('SPIN10', 10, 'percentage', 'Spin Wheel 10% Off'),
-            ('SPIN15', 15, 'percentage', 'Spin Wheel 15% Off'),
-            ('SPIN20', 20, 'percentage', 'Spin Wheel 20% Off')
+            ('SPIN7', 7, 'percentage', 'Spin Wheel 7% Off'),
+            ('SPIN9', 9, 'percentage', 'Spin Wheel 9% Off'),
+            ('SPIN11', 11, 'percentage', 'Spin Wheel 11% Off'),
+            ('SPIN13', 13, 'percentage', 'Spin Wheel 13% Off'),
+            ('SPIN15', 15, 'percentage', 'Spin Wheel 15% Off')
         ]
         for code, discount, ctype, desc in spin_coupons:
             conn.execute(
