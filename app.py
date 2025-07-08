@@ -57,6 +57,11 @@ def index():
         product['avg_rating'] = avg_rating
         products_with_ratings.append(product)
 
+    # ✅ Get Know Your Perfume image
+    know_your_perfume = conn.execute(
+        "SELECT * FROM know_your_perfume ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+
     conn.close()
 
     return render_template(
@@ -65,7 +70,8 @@ def index():
         banner=banner,
         background=background,
         categories=categories,
-        logo=logo
+        logo=logo,
+        know_your_perfume=know_your_perfume  # ✅ Pass to template!
     )
 
 # -----------------------------

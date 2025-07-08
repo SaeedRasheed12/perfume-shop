@@ -122,6 +122,38 @@
   }
 </style>
 
+{% if know_your_perfume %}
+<div class="container-fluid px-0 my-5">
+  <!-- ✅ Hero-style background image with responsive class -->
+  <div class="position-relative overflow-hidden know-your-perfume-hero"
+       style="
+         height: 300px;
+         background: url('{{ url_for('static', filename='uploads/' ~ know_your_perfume.filename) }}') center center / contain no-repeat;
+         background-color: #f5efe6; /* match your infographic background! */
+       ">
+  </div>
+
+  <!-- ✅ Text + button BELOW the banner -->
+  <div class="text-center mt-3">
+    <h3 class="fw-bold mb-2">Know Your Perfume</h3>
+    <p class="mb-3">Discover the fragrance that suits your style and mood.</p>
+    <a href="{{ url_for('know_your_perfume') }}"
+       class="btn btn-dark rounded-pill px-4 py-2">
+      Explore Now
+    </a>
+  </div>
+</div>
+
+<!-- ✅ Responsive hero height for mobile -->
+<style>
+  @media (max-width: 768px) {
+    .know-your-perfume-hero {
+      height: 200px !important;
+    }
+  }
+</style>
+{% endif %}
+
 <!-- ✅ Product Showcase -->
 <div class="container py-5" id="products">
   <h2 class="text-center mb-5">Our Collection</h2>
