@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+  <h2>📝 Customer Reviews</h2>
+  {% if reviews %}
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Name</th>
+        <th>Rating</th>
+        <th>Comment</th>
+        <th>Posted On</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for review in reviews %}
+      <tr>
+        <td>{{ review.product_name }}</td>
+        <td>{{ review.customer_name }}</td>
+        <td>{{ review.rating }}/5</td>
+        <td>{{ review.comment }}</td>
+        <td>{{ review.created_at }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('delete_review', review_id=review.id) }}">
+            <button class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
+              Delete
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No reviews found.</p>
+  {% endif %}
+</div>
+{% endblock %}

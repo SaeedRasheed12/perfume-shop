@@ -56,6 +56,9 @@
     <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-primary">
       📦 View All Orders
     </a>
+    <a href="{{ url_for('admin_reviews') }}" class="btn btn-outline-dark mb-3">
+  📝 Manage Customer Reviews
+    </a>
     <a href="{{ url_for('admin_categories') }}" class="btn btn-outline-secondary">
       📂 Manage Categories
     </a>
@@ -256,65 +259,91 @@
     </table>
   </div>
 
-  <!-- ✅ Coupon Management + View + Delete -->
-  <div class="card p-4 mb-5 shadow rounded-3">
-    <h4 class="mb-3">Add Coupon</h4>
-    <form method="POST" action="{{ url_for('add_coupon') }}">
-      <div class="mb-3">
-        <label class="form-label">Coupon Code</label>
-        <input type="text" name="code" class="form-control" placeholder="e.g. SUMMER20" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Discount</label>
-        <input type="number" step="0.01" name="discount" class="form-control" placeholder="e.g. 20 for 20%" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Type</label>
-        <select name="type" class="form-select" required>
-          <option value="percentage">Percentage</option>
-          <option value="fixed">Fixed Amount</option>
-          <option value="free_delivery">Free Delivery</option>
-        </select>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Description (optional)</label>
-        <textarea name="description" class="form-control"></textarea>
-      </div>
-      <button type="submit" class="btn btn-warning">Add Coupon</button>
-    </form>
+<!-- ✅ Coupon Management + View + Delete -->
+<div class="card p-4 mb-5 shadow rounded-3">
+  <h4 class="mb-3">Add Coupon</h4>
+  <form method="POST" action="{{ url_for('add_coupon') }}">
+    <div class="mb-3">
+      <label class="form-label">Coupon Code</label>
+      <input type="text" name="code" class="form-control" placeholder="e.g. SUMMER20" required>
+    </div>
 
-    <!-- ✅ Show all coupons with Delete -->
-    <h4 class="mt-5 mb-3">All Coupons</h4>
-    <table class="table table-bordered">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Code</th>
-          <th>Discount</th>
-          <th>Type</th>
-          <th>Used</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for coupon in coupons %}
-        <tr>
-          <td>{{ loop.index }}</td>
-          <td>{{ coupon.code }}</td>
-          <td>{{ coupon.discount }}</td>
-          <td>{{ coupon.type }}</td>
-          <td>{{ coupon.used }}</td>
-          <td>
-            <form method="POST" action="{{ url_for('delete_coupon', coupon_id=coupon.id) }}"
-                  onsubmit="return confirm('Are you sure you want to delete this coupon?');">
-              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <!-- ✅ Discount field -->
+    <div class="mb-3" id="discount-group">
+      <label class="form-label">Discount</label>
+      <input type="number" step="0.01" name="discount" class="form-control" placeholder="e.g. 20 for 20%">
+    </div>
+
+    <!-- ✅ Coupon type -->
+    <div class="mb-3">
+      <label class="form-label">Type</label>
+      <select name="type" class="form-select" id="coupon-type" required>
+        <option value="percentage">Percentage</option>
+        <option value="fixed">Fixed Amount</option>
+        <option value="free_delivery">Free Delivery</option>
+      </select>
+    </div>
+
+    <!-- ✅ Optional description -->
+    <div class="mb-3">
+      <label class="form-label">Description (optional)</label>
+      <textarea name="description" class="form-control"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-warning">Add Coupon</button>
+  </form>
+
+  <!-- ✅ Show all coupons -->
+  <h4 class="mt-5 mb-3">All Coupons</h4>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Code</th>
+        <th>Discount</th>
+        <th>Type</th>
+        <th>Used</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for coupon in coupons %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ coupon.code }}</td>
+        <td>{{ coupon.discount }}</td>
+        <td>{{ coupon.type }}</td>
+        <td>{{ coupon.used }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('delete_coupon', coupon_id=coupon.id) }}"
+                onsubmit="return confirm('Are you sure you want to delete this coupon?');">
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ✅ JS to auto-hide Discount field if Free Delivery -->
+<script>
+  const couponType = document.getElementById('coupon-type');
+  const discountGroup = document.getElementById('discount-group');
+
+  function toggleDiscountField() {
+    if (couponType.value === 'free_delivery') {
+      discountGroup.style.display = 'none';
+      discountGroup.querySelector('input').value = 0; // auto-set discount to 0
+    } else {
+      discountGroup.style.display = 'block';
+    }
+  }
+
+  couponType.addEventListener('change', toggleDiscountField);
+  // Initialize on page load too
+  toggleDiscountField();
+</script>
 
   <!-- ✅ Spin Wheel Feature Toggle -->
   <div class="card p-4 mb-5 shadow rounded-3">

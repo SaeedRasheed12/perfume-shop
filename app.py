@@ -38,33 +38,86 @@ def get_db_connection():
 @app.route('/')
 def index():
     conn = get_db_connection()
+
     products = conn.execute('SELECT * FROM products').fetchall()
     categories = conn.execute('SELECT * FROM categories').fetchall()
     banner = conn.execute('SELECT * FROM banners ORDER BY id DESC LIMIT 1').fetchone()
     background = conn.execute('SELECT * FROM backgrounds ORDER BY id DESC LIMIT 1').fetchone()
-    logo = conn.execute('SELECT * FROM logos ORDER BY id DESC LIMIT 1').fetchone()  # ✅ Fetch logo
+    logo = conn.execute('SELECT * FROM logos ORDER BY id DESC LIMIT 1').fetchone()
+
+    # ✅ Add average rating to each product
+    products_with_ratings = []
+    for product in products:
+        avg_rating = conn.execute(
+            'SELECT ROUND(AVG(rating), 1) FROM reviews WHERE product_id = ?',
+            (product['id'],)
+        ).fetchone()[0] or 0  # fallback to 0 if None
+
+        product = dict(product)
+        product['avg_rating'] = avg_rating
+        products_with_ratings.append(product)
+
     conn.close()
+
     return render_template(
         'index.html',
-        products=products,
+        products=products_with_ratings,
         banner=banner,
         background=background,
         categories=categories,
-        logo=logo  # ✅ Pass logo to template
+        logo=logo
     )
 
 # -----------------------------
 # 📄 Product Detail
 # -----------------------------
-@app.route('/product/<int:product_id>')
+@app.route('/product/<int:product_id>', methods=['GET', 'POST'])
 def product_detail(product_id):
     conn = get_db_connection()
+
     product = conn.execute('SELECT * FROM products WHERE id = ?', (product_id,)).fetchone()
+
+    if request.method == 'POST':
+        customer_name = request.form['customer_name']
+        rating = int(request.form['rating'])
+        comment = request.form['comment']
+
+        conn.execute(
+            'INSERT INTO reviews (product_id, customer_name, rating, comment) VALUES (?, ?, ?, ?)',
+            (product_id, customer_name, rating, comment)
+        )
+        conn.commit()
+
+    reviews = conn.execute(
+        'SELECT * FROM reviews WHERE product_id = ? ORDER BY created_at DESC',
+        (product_id,)
+    ).fetchall()
+
     conn.close()
-    if not product:
-        flash('Product not found.')
-        return redirect(url_for('index'))
-    return render_template('product_detail.html', product=product)
+    return render_template('product_detail.html', product=product, reviews=reviews)
+
+@app.route('/add_review/<int:product_id>', methods=['POST'])
+def add_review(product_id):
+    name = request.form['customer_name'].strip()
+    rating = int(request.form['rating'])
+    comment = request.form['comment'].strip()
+
+    if not name or rating < 1 or rating > 5:
+        flash('Please provide a valid name and rating.')
+        return redirect(url_for('product_detail', product_id=product_id))
+
+    conn = get_db_connection()
+    conn.execute(
+        'INSERT INTO reviews (product_id, customer_name, rating, comment) VALUES (?, ?, ?, ?)',
+        (product_id, name, rating, comment)
+    )
+    conn.commit()
+    conn.close()
+
+    flash('Thank you for your review!')
+    return redirect(url_for('product_detail', product_id=product_id))
+
+
 
 # -----------------------------
 # ✅ Cart routes
@@ -602,6 +655,28 @@ def admin_login():
             flash('Invalid credentials.')
     return render_template('admin_login.html')
 
+@app.route('/admin/reviews')
+@login_required
+def admin_reviews():
+    conn = get_db_connection()
+    reviews = conn.execute('''
+        SELECT reviews.*, products.name AS product_name
+        FROM reviews
+        JOIN products ON reviews.product_id = products.id
+        ORDER BY reviews.created_at DESC
+    ''').fetchall()
+    conn.close()
+    return render_template('admin_reviews.html', reviews=reviews)
+
+@app.route('/admin/delete_review/<int:review_id>', methods=['POST'])
+@login_required
+def delete_review(review_id):
+    conn = get_db_connection()
+    conn.execute('DELETE FROM reviews WHERE id = ?', (review_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_reviews'))
+
 @app.route('/know-your-perfume')
 def know_your_perfume():
     conn = get_db_connection()
@@ -912,7 +987,11 @@ def add_coupon():
     code = request.form['code'].strip().upper()
     discount = float(request.form['discount'])
     type_ = request.form['type']
-    description = request.form.get('description')
+    description = request.form.get('description', '').strip()
+
+    # ✅ If it's a free delivery coupon, force discount to 0
+    if type_ == 'free_delivery':
+        discount = 0
 
     conn = get_db_connection()
     conn.execute(
@@ -922,7 +1001,7 @@ def add_coupon():
     conn.commit()
     conn.close()
 
-    flash('Coupon added successfully.')
+    flash('✅ Coupon added successfully.')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/delete_banner/<int:banner_id>', methods=['POST'])
@@ -1335,7 +1414,6 @@ def invoice(order_id):
 
     # ✅ Get order details
     order = conn.execute('SELECT * FROM orders WHERE id = ?', (order_id,)).fetchone()
-
     if not order:
         conn.close()
         return "Order not found.", 404
@@ -1350,13 +1428,22 @@ def invoice(order_id):
 
     subtotal = sum(item['price'] * item['quantity'] for item in items)
 
-    # ✅ Get delivery fee
-    if order['coupon_code'] and order['coupon_code'].upper() == 'FREEDELIVERY':
+    # ✅ Look up coupon if any
+    coupon = None
+    if order['coupon_code']:
+        coupon = conn.execute(
+            'SELECT * FROM coupons WHERE code = ?',
+            (order['coupon_code'].upper(),)
+        ).fetchone()
+
+    # ✅ Determine delivery fee
+    if coupon and coupon['type'] == 'free_delivery':
         delivery_fee = 0
     else:
         row = conn.execute("SELECT value FROM settings WHERE key = 'delivery_fee'").fetchone()
         delivery_fee = float(row['value']) if row else 0
 
+    # ✅ Discount from order record
     discount = float(order['discount']) if order['discount'] else 0
 
     final_total = max(0, subtotal + delivery_fee - discount)
@@ -1376,6 +1463,7 @@ def invoice(order_id):
         delivery_fee=delivery_fee,
         discount=discount,
         final_total=final_total,
+        coupon=coupon,
         expected_date=expected_date.strftime('%Y-%m-%d')
     )
 
@@ -1442,6 +1530,19 @@ def init_db():
                 price REAL NOT NULL,
                 image TEXT,
                 category_id INTEGER
+            )
+        ''')
+
+        # ✅ REVIEWS
+        conn.execute('''
+            CREATE TABLE reviews (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL,
+                customer_name TEXT NOT NULL,
+                rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+                comment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             )
         ''')
 
@@ -1545,7 +1646,7 @@ def init_db():
             )
         ''')
 
-        # ✅ NEW: CONVERSATIONS
+        # ✅ CONVERSATIONS
         conn.execute('''
             CREATE TABLE conversations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1555,7 +1656,7 @@ def init_db():
             )
         ''')
 
-        # ✅ MESSAGES linked to conversations
+        # ✅ MESSAGES
         conn.execute('''
             CREATE TABLE messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1568,12 +1669,12 @@ def init_db():
             )
         ''')
 
-        # ✅ Insert settings
+        # ✅ Default settings
         conn.execute('INSERT INTO settings (key, value) VALUES (?, ?)', ('delivery_fee', '300'))
         conn.execute('INSERT INTO settings (key, value) VALUES (?, ?)',
                      ('top_banner', '15 Days Hassle-Free Return | Free Shipping on Orders Above PKR 3,000'))
 
-        # ✅ SPIN coupons
+        # ✅ SPIN Coupons
         spin_coupons = [
             ('SPIN5', 5, 'percentage', 'Spin Wheel 5% Off'),
             ('SPIN10', 10, 'percentage', 'Spin Wheel 10% Off'),
@@ -1588,16 +1689,15 @@ def init_db():
 
         conn.commit()
         conn.close()
-        print("✅ New DB initialized with conversations & live chat!")
+        print("✅ New DB initialized with products, reviews, conversations & spin coupons!")
 
     else:
-        # ✅ If DB exists: check used column
+        # ✅ Ensure extra columns/tables
         existing_columns = conn.execute('PRAGMA table_info(coupons)').fetchall()
         if 'used' not in [col['name'] for col in existing_columns]:
             conn.execute('ALTER TABLE coupons ADD COLUMN used INTEGER DEFAULT 0')
             print("✅ Added `used` to coupons.")
 
-        # ✅ Ensure customer_spins
         if not conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='customer_spins';").fetchone():
             conn.execute('''
                 CREATE TABLE customer_spins (
@@ -1609,7 +1709,6 @@ def init_db():
             ''')
             print("✅ Created `customer_spins`.")
 
-        # ✅ Ensure conversations
         if not conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='conversations';").fetchone():
             conn.execute('''
                 CREATE TABLE conversations (
@@ -1621,7 +1720,6 @@ def init_db():
             ''')
             print("✅ Created `conversations`.")
 
-        # ✅ Ensure messages linked
         if not conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='messages';").fetchone():
             conn.execute('''
                 CREATE TABLE messages (
@@ -1634,9 +1732,24 @@ def init_db():
                     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
                 )
             ''')
-            print("✅ Created `messages` table linked to conversations!")
+            print("✅ Created `messages` table linked to conversations.")
 
-        # ✅ SPIN coupons
+        # ✅ Ensure REVIEWS table exists if not already
+        if not conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='reviews';").fetchone():
+            conn.execute('''
+                CREATE TABLE reviews (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id INTEGER NOT NULL,
+                    customer_name TEXT NOT NULL,
+                    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+                    comment TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                )
+            ''')
+            print("✅ Created `reviews` table.")
+
+        # ✅ SPIN Coupons
         spin_coupons = [
             ('SPIN5', 5, 'percentage', 'Spin Wheel 5% Off'),
             ('SPIN10', 10, 'percentage', 'Spin Wheel 10% Off'),
@@ -1651,7 +1764,7 @@ def init_db():
 
         conn.commit()
         conn.close()
-        print("✅ DB ensured: conversations, messages and SPIN coupons ready!")
+        print("✅ DB ensured: all tables ready including reviews & spin coupons!")
 
 # ✅ Context processor for Top Banner (add this above init_db, once)
 @app.context_processor

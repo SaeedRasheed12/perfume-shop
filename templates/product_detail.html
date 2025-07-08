@@ -3,11 +3,10 @@
 {% block content %}
 <div class="container py-5">
   <div class="row align-items-center">
-    
     <!-- ✅ Product Image -->
     <div class="col-md-6 mb-4 mb-md-0">
-      <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}" 
-           alt="{{ product.name }} image" 
+      <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}"
+           alt="{{ product.name }} image"
            class="img-fluid rounded-4 shadow"
            style="object-fit: cover; max-height: 500px; width: 100%;">
     </div>
@@ -18,13 +17,70 @@
       <h4 class="text-muted mb-3">PKR {{ '%.2f'|format(product.price) }}</h4>
       <p class="mb-4">{{ product.description }}</p>
 
-      <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-dark px-4 py-2 w-100">
+      <!-- ✅ Add to Cart -->
+      <a href="{{ url_for('add_to_cart', product_id=product.id) }}"
+         class="btn btn-dark px-4 py-2 w-100">
         🛒 Add to Cart
       </a>
 
+      <!-- ✅ Back link -->
       <div class="mt-4">
-        <a href="{{ url_for('index') }}" class="text-decoration-none text-secondary back-link">&larr; Back to Shop</a>
+        <a href="{{ url_for('index') }}"
+           class="text-decoration-none text-secondary back-link">&larr; Back to Shop</a>
       </div>
+    </div>
+  </div>
+
+  <!-- ✅ Reviews Section -->
+  <div class="card mt-5 shadow-sm">
+    <div class="card-header">
+      <h4 class="mb-0">Customer Reviews</h4>
+    </div>
+    <div class="card-body">
+      {% if reviews %}
+        {% for rev in reviews %}
+          <div class="mb-3 border-bottom pb-2">
+            <strong>{{ rev.customer_name }}</strong>
+            <span class="text-warning">
+              {% for i in range(rev.rating) %}★{% endfor %}
+              {% for i in range(5 - rev.rating) %}☆{% endfor %}
+            </span>
+            <p class="mb-1">{{ rev.comment }}</p>
+            <small class="text-muted">{{ rev.created_at }}</small>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p>No reviews yet. Be the first to review!</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ✅ Add Review Form -->
+  <div class="card mt-3 shadow-sm">
+    <div class="card-header">
+      <h5 class="mb-0">Leave a Review</h5>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('product_detail', product_id=product.id) }}">
+        <div class="mb-2">
+          <input type="text" name="customer_name" class="form-control" placeholder="Your Name" required>
+        </div>
+        <div class="mb-2">
+          <label for="rating">Rating:</label>
+          <select name="rating" id="rating" class="form-select" required>
+            <option value="">Select...</option>
+            <option value="5">★★★★★ (5)</option>
+            <option value="4">★★★★☆ (4)</option>
+            <option value="3">★★★☆☆ (3)</option>
+            <option value="2">★★☆☆☆ (2)</option>
+            <option value="1">★☆☆☆☆ (1)</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <textarea name="comment" class="form-control" placeholder="Write your review..." rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-dark w-100">Submit Review</button>
+      </form>
     </div>
   </div>
 </div>
@@ -34,23 +90,14 @@
   .btn-dark:hover {
     opacity: 0.9;
   }
-
   .back-link:hover {
     color: #000;
     text-decoration: underline;
   }
-
-  /* ✅ Responsive tweaks for small screens */
   @media (max-width: 768px) {
-    .col-md-6 h2 {
-      font-size: 1.75rem;
-    }
-    .col-md-6 h4 {
-      font-size: 1.2rem;
-    }
-    .col-md-6 p {
-      font-size: 1rem;
-    }
+    .col-md-6 h2 { font-size: 1.75rem; }
+    .col-md-6 h4 { font-size: 1.2rem; }
+    .col-md-6 p { font-size: 1rem; }
   }
 </style>
 {% endblock %}
