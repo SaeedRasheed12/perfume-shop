@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash , render_template_string
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash , render_template_string
 from datetime import datetime, timedelta
 import sqlite3
 import os
@@ -720,13 +720,35 @@ def admin_dashboard():
         'SELECT * FROM customer_spins ORDER BY created_at DESC'
     ).fetchall()
 
+    # ✅ NEW: Fetch only OPEN conversations with messages
+    messages = conn.execute(
+        '''
+        SELECT m.*, c.status, c.customer_name as conv_customer_name
+        FROM messages m
+        JOIN conversations c ON m.conversation_id = c.id
+        WHERE c.status = 'open'
+        ORDER BY m.conversation_id ASC, m.created_at ASC
+        '''
+    ).fetchall()
+    
+    messages = conn.execute(
+    '''
+    SELECT m.*, c.customer_name AS conv_customer_name, c.status
+    FROM messages m
+    JOIN conversations c ON m.conversation_id = c.id
+    WHERE c.status = 'open'
+    ORDER BY m.conversation_id ASC, m.created_at ASC
+    '''
+    ).fetchall()
+
     conn.close()
 
     return render_template(
         'admin_dashboard.html',
         products=products,
         banner=banner,
-        logo=logo,  # ✅ Pass logo to template!
+        logo=logo,
+        messages=messages,
         background=background,
         categories=categories,
         know_your_perfume=know_your_perfume,
@@ -738,6 +760,151 @@ def admin_dashboard():
         top_products=top_products,
         spins=spins
     )
+
+@app.route('/get_messages')
+def get_messages():
+    conv_id = request.args.get('conversation_id')
+
+    # Make sure conversation_id is a number
+    if not conv_id or not conv_id.isdigit():
+        return jsonify([])
+
+    conn = get_db_connection()
+    conv = conn.execute(
+        'SELECT id, status FROM conversations WHERE id = ?', (conv_id,)
+    ).fetchone()
+
+    if not conv:
+        conn.close()
+        return jsonify([])
+
+    if conv['status'] == 'closed':
+        conn.close()
+        return jsonify({'closed': True})
+
+    messages = conn.execute(
+        'SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC',
+        (conv_id,)
+    ).fetchall()
+    conn.close()
+
+    return jsonify([dict(m) for m in messages])
+
+# ✅ Send customer message, ensure conversation exists
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    data = request.get_json()
+    customer_name = data.get('customer_name', '').strip()
+    message = data.get('message', '').strip()
+    conv_id = data.get('conversation_id')
+
+    if not customer_name or not message:
+        return jsonify({'error': 'Missing data'}), 400
+
+    conn = get_db_connection()
+
+    # ✅ Find latest conversation for this customer
+    conv = conn.execute(
+        '''
+        SELECT id, status FROM conversations
+        WHERE customer_name = ?
+        ORDER BY id DESC LIMIT 1
+        ''',
+        (customer_name,)
+    ).fetchone()
+
+    # ✅ If closed, make new conversation
+    if not conv or conv['status'] == 'closed':
+        conn.execute(
+            'INSERT INTO conversations (customer_name, status) VALUES (?, ?)',
+            (customer_name, 'open')
+        )
+        conv_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    else:
+        conv_id = conv['id']
+
+    # ✅ Insert message in the correct conversation
+    conn.execute(
+        'INSERT INTO messages (conversation_id, customer_name, message, is_admin) VALUES (?, ?, ?, ?)',
+        (conv_id, customer_name, message, 0)
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'conversation_id': conv_id}), 200
+
+# ✅ Admin replies in context of a conversation
+@app.route('/admin/reply', methods=['POST'])
+@login_required
+def admin_reply():
+    data = request.get_json()
+    conv_id = data.get('conversation_id')
+    reply = data.get('reply', '').strip()
+
+    if not conv_id or not reply or not str(conv_id).isdigit():
+        return jsonify({'error': 'Missing data'}), 400
+
+    conn = get_db_connection()
+    conv = conn.execute(
+        'SELECT id FROM conversations WHERE id = ? AND status = ?',
+        (conv_id, 'open')
+    ).fetchone()
+
+    if not conv:
+        conn.close()
+        return jsonify({'error': 'Conversation closed'}), 400
+
+    conn.execute(
+        '''
+        INSERT INTO messages (conversation_id, customer_name, message, is_admin)
+        VALUES (?, ?, ?, ?)
+        ''',
+        (conv_id, 'Admin', reply, 1)
+    )
+
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True}), 200
+
+# ✅ Admin closes chat
+@app.route('/admin/close_chat', methods=['POST'])
+@login_required
+def close_chat():
+    conv_id = request.form.get('conversation_id')
+    if not conv_id or not str(conv_id).isdigit():
+        return redirect(url_for('admin_dashboard'))
+
+    conn = get_db_connection()
+    conn.execute(
+        'UPDATE conversations SET status = ? WHERE id = ?',
+        ('closed', conv_id)
+    )
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/get_messages_all')
+@login_required
+def get_messages_all():
+    conn = get_db_connection()
+    open_convs = conn.execute(
+        'SELECT id, customer_name FROM conversations WHERE status = ?', ('open',)
+    ).fetchall()
+
+    results = []
+    for conv in open_convs:
+        messages = conn.execute(
+            'SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC',
+            (conv['id'],)
+        ).fetchall()
+        results.append({
+            'conversation_id': conv['id'],
+            'customer_name': conv['customer_name'],
+            'messages': [dict(m) for m in messages]
+        })
+
+    conn.close()
+    return jsonify(results)
 
 @app.route('/admin/add_coupon', methods=['POST'])
 @login_required
@@ -951,7 +1118,7 @@ def upload_banner():
     flash('Hero banner updated.')
     return redirect(url_for('admin_dashboard'))
 
-@app.route('/admin/categories')
+@app.route('/ategories')
 @login_required
 def admin_categories():
     conn = get_db_connection()
@@ -1266,7 +1433,7 @@ def init_db():
     conn = get_db_connection()
 
     if new_db:
-        # ✅ PRODUCTS table
+        # ✅ PRODUCTS
         conn.execute('''
             CREATE TABLE products (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1278,7 +1445,7 @@ def init_db():
             )
         ''')
 
-        # ✅ ORDERS table with status, tracking code, timestamps
+        # ✅ ORDERS
         conn.execute('''
             CREATE TABLE orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1293,7 +1460,7 @@ def init_db():
             )
         ''')
 
-        # ✅ ORDER ITEMS table with price stored
+        # ✅ ORDER ITEMS
         conn.execute('''
             CREATE TABLE order_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1306,7 +1473,7 @@ def init_db():
             )
         ''')
 
-        # ✅ BANNERS table
+        # ✅ BANNERS
         conn.execute('''
             CREATE TABLE banners (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1315,7 +1482,7 @@ def init_db():
             )
         ''')
 
-        # ✅ CATEGORIES table
+        # ✅ CATEGORIES
         conn.execute('''
             CREATE TABLE categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1323,7 +1490,7 @@ def init_db():
             )
         ''')
 
-        # ✅ BACKGROUNDS table
+        # ✅ BACKGROUNDS
         conn.execute('''
             CREATE TABLE backgrounds (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1331,7 +1498,7 @@ def init_db():
             )
         ''')
 
-        # ✅ LOGOS table
+        # ✅ LOGOS
         conn.execute('''
             CREATE TABLE logos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1339,7 +1506,7 @@ def init_db():
             )
         ''')
 
-        # ✅ COUPONS table — with `used` column!
+        # ✅ COUPONS
         conn.execute('''
             CREATE TABLE coupons (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1351,7 +1518,7 @@ def init_db():
             )
         ''')
 
-        # ✅ CUSTOMER SPINS table — NEW!
+        # ✅ CUSTOMER SPINS
         conn.execute('''
             CREATE TABLE customer_spins (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1361,7 +1528,7 @@ def init_db():
             )
         ''')
 
-        # ✅ SETTINGS table
+        # ✅ SETTINGS
         conn.execute('''
             CREATE TABLE settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1370,7 +1537,7 @@ def init_db():
             )
         ''')
 
-        # ✅ KNOW YOUR PERFUME table
+        # ✅ KNOW YOUR PERFUME
         conn.execute('''
             CREATE TABLE know_your_perfume (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1378,25 +1545,41 @@ def init_db():
             )
         ''')
 
-        # ✅ Insert default settings
-        conn.execute(
-            'INSERT INTO settings (key, value) VALUES (?, ?)',
-            ('delivery_fee', '300')
-        )
+        # ✅ NEW: CONVERSATIONS
+        conn.execute('''
+            CREATE TABLE conversations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_name TEXT NOT NULL,
+                status TEXT DEFAULT 'open',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
 
-        conn.execute(
-            'INSERT INTO settings (key, value) VALUES (?, ?)',
-            ('top_banner', '15 Days Hassle-Free Return | Free Shipping on Orders Above PKR 3,000')
-        )
+        # ✅ MESSAGES linked to conversations
+        conn.execute('''
+            CREATE TABLE messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id INTEGER NOT NULL,
+                customer_name TEXT NOT NULL,
+                message TEXT NOT NULL,
+                is_admin INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+            )
+        ''')
 
-        # ✅ Insert default SPIN wheel coupons
+        # ✅ Insert settings
+        conn.execute('INSERT INTO settings (key, value) VALUES (?, ?)', ('delivery_fee', '300'))
+        conn.execute('INSERT INTO settings (key, value) VALUES (?, ?)',
+                     ('top_banner', '15 Days Hassle-Free Return | Free Shipping on Orders Above PKR 3,000'))
+
+        # ✅ SPIN coupons
         spin_coupons = [
             ('SPIN5', 5, 'percentage', 'Spin Wheel 5% Off'),
             ('SPIN10', 10, 'percentage', 'Spin Wheel 10% Off'),
             ('SPIN15', 15, 'percentage', 'Spin Wheel 15% Off'),
             ('SPIN20', 20, 'percentage', 'Spin Wheel 20% Off')
         ]
-
         for code, discount, ctype, desc in spin_coupons:
             conn.execute(
                 'INSERT INTO coupons (code, discount, type, description) VALUES (?, ?, ?, ?)',
@@ -1405,20 +1588,17 @@ def init_db():
 
         conn.commit()
         conn.close()
-        print("✅ Database initialized with all tables, SPIN coupons, `customer_spins`, constraints, and default settings!")
-    else:
-        # ✅ If DB already exists, ensure `used` column exists in coupons table
-        existing_columns = conn.execute('PRAGMA table_info(coupons)').fetchall()
-        column_names = [col['name'] for col in existing_columns]
-        if 'used' not in column_names:
-            conn.execute('ALTER TABLE coupons ADD COLUMN used INTEGER DEFAULT 0')
-            print("✅ Added missing `used` column to coupons table!")
+        print("✅ New DB initialized with conversations & live chat!")
 
-        # ✅ Ensure `customer_spins` table exists
-        existing_tables = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='customer_spins';"
-        ).fetchone()
-        if not existing_tables:
+    else:
+        # ✅ If DB exists: check used column
+        existing_columns = conn.execute('PRAGMA table_info(coupons)').fetchall()
+        if 'used' not in [col['name'] for col in existing_columns]:
+            conn.execute('ALTER TABLE coupons ADD COLUMN used INTEGER DEFAULT 0')
+            print("✅ Added `used` to coupons.")
+
+        # ✅ Ensure customer_spins
+        if not conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='customer_spins';").fetchone():
             conn.execute('''
                 CREATE TABLE customer_spins (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1427,16 +1607,42 @@ def init_db():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
-            print("✅ Created missing `customer_spins` table!")
+            print("✅ Created `customer_spins`.")
 
-        # ✅ Ensure SPIN coupons exist (INSERT OR IGNORE)
+        # ✅ Ensure conversations
+        if not conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='conversations';").fetchone():
+            conn.execute('''
+                CREATE TABLE conversations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer_name TEXT NOT NULL,
+                    status TEXT DEFAULT 'open',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            print("✅ Created `conversations`.")
+
+        # ✅ Ensure messages linked
+        if not conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='messages';").fetchone():
+            conn.execute('''
+                CREATE TABLE messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    conversation_id INTEGER NOT NULL,
+                    customer_name TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    is_admin INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+                )
+            ''')
+            print("✅ Created `messages` table linked to conversations!")
+
+        # ✅ SPIN coupons
         spin_coupons = [
             ('SPIN5', 5, 'percentage', 'Spin Wheel 5% Off'),
             ('SPIN10', 10, 'percentage', 'Spin Wheel 10% Off'),
             ('SPIN15', 15, 'percentage', 'Spin Wheel 15% Off'),
             ('SPIN20', 20, 'percentage', 'Spin Wheel 20% Off')
         ]
-
         for code, discount, ctype, desc in spin_coupons:
             conn.execute(
                 'INSERT OR IGNORE INTO coupons (code, discount, type, description) VALUES (?, ?, ?, ?)',
@@ -1445,7 +1651,7 @@ def init_db():
 
         conn.commit()
         conn.close()
-        print("✅ Existing DB ensured SPIN coupons exist and `customer_spins` table checked!")
+        print("✅ DB ensured: conversations, messages and SPIN coupons ready!")
 
 # ✅ Context processor for Top Banner (add this above init_db, once)
 @app.context_processor

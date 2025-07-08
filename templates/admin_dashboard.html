@@ -61,6 +61,131 @@
     </a>
   </div>
 
+  
+<!-- ✅ Admin Dashboard: Live Chat Table -->
+<div class="card p-4 mb-4 shadow rounded-3">
+  <h4 class="mb-3">📨 Live Chat</h4>
+
+  <table class="table table-striped table-hover">
+    <thead class="table-dark">
+      <tr>
+        <th>Name</th>
+        <th>Messages</th>
+        <th>Reply</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="chat-table-body">
+      {% for conv_id, group in messages | groupby('conversation_id') %}
+      <tr>
+        <!-- ✅ Customer Name -->
+        <td class="fw-semibold">{{ group[0].customer_name }}</td>
+
+        <!-- ✅ All Messages -->
+        <td style="width: 40%;">
+          <div id="messages-conv-{{ conv_id }}"
+               style="max-height: 200px; overflow-y: auto; padding: 5px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
+            {% for msg in group %}
+              <div class="mb-1">
+                <b>{{ 'Admin' if msg.is_admin else msg.customer_name }}:</b>
+                <span>{{ msg.message }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </td>
+
+        <!-- ✅ Reply Input -->
+        <td style="width: 30%;">
+          <form class="reply-form mb-1" data-conversation="{{ conv_id }}">
+            <div class="input-group input-group-sm">
+              <input type="text" name="reply" class="form-control reply-input"
+                     placeholder="Type reply...">
+              <button type="submit" class="btn btn-dark">Send</button>
+            </div>
+          </form>
+        </td>
+
+        <!-- ✅ Close Chat Button -->
+        <td>
+          <form method="POST" action="{{ url_for('close_chat') }}">
+            <input type="hidden" name="conversation_id" value="{{ conv_id }}">
+            <button type="submit" class="btn btn-sm btn-danger">Close</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+  let inputValues = {};  // 🗂️ Map: { conversation_id: "typed text" }
+
+  function setupReplyForms() {
+    document.querySelectorAll('.reply-form').forEach(form => {
+      const input = form.querySelector('.reply-input');
+      const conversationId = form.dataset.conversation;
+
+      // Keep any cached input value
+      if (!(conversationId in inputValues)) inputValues[conversationId] = '';
+      input.value = inputValues[conversationId];
+
+      input.addEventListener('input', () => {
+        inputValues[conversationId] = input.value;  // Preserve on input
+      });
+
+      form.onsubmit = function (e) {
+        e.preventDefault();
+        const reply = input.value.trim();
+        if (!reply) return;
+
+        fetch('/admin/reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reply: reply,
+            conversation_id: conversationId
+          })
+        })
+        .then(res => {
+          if (res.ok) {
+            input.value = '';
+            inputValues[conversationId] = '';
+            loadMessages(); // show immediately
+          } else {
+            alert('Failed to send reply.');
+          }
+        })
+        .catch(err => console.error(err));
+      };
+    });
+  }
+
+  function loadMessages() {
+    fetch('/get_messages_all')
+      .then(res => res.json())
+      .then(data => {
+        data.forEach(conv => {
+          let messagesHtml = '';
+          conv.messages.forEach(msg => {
+            const who = msg.is_admin ? 'Admin' : msg.customer_name;
+            messagesHtml += `<div><b>${who}:</b> ${msg.message}</div>`;
+          });
+
+          const msgBox = document.getElementById('messages-conv-' + conv.conversation_id);
+          if (msgBox) {
+            msgBox.innerHTML = messagesHtml;
+            msgBox.scrollTop = msgBox.scrollHeight; // ✅ auto-scroll
+          }
+        });
+      })
+      .catch(err => console.error(err));
+  }
+
+  setupReplyForms();
+  setInterval(loadMessages, 4000);  // Always live — no flicker!
+</script>
+
   <!-- ✅ Add New Product -->
   <div class="card p-4 mb-5 shadow rounded-3">
     <h4 class="mb-3">Add New Product</h4>

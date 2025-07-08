@@ -20,20 +20,22 @@
       {% if not background %} background: #fdfdfd; {% endif %}
     }
 
+    /* ✅ Logo styling */
     .navbar-brand img {
       max-height: 80px;
       object-fit: contain;
     }
 
+    /* ✅ Navbar links */
     .nav-link {
       color: #fff !important;
       transition: color 0.3s ease;
     }
-
     .nav-link:hover {
       color: gold !important;
     }
 
+    /* ✅ Hero Section (shared for inner pages if needed) */
     .hero {
       position: relative;
       height: 100vh;
@@ -43,7 +45,6 @@
       justify-content: center;
       text-align: center;
     }
-
     .hero-content {
       position: relative;
       z-index: 2;
@@ -51,16 +52,11 @@
       max-width: 90%;
       padding: 0 1rem;
     }
-
-    .hero-content h1 {
-      font-size: 3rem;
-      line-height: 1.2;
-    }
-
+    .hero-content h1 { font-size: 3rem; line-height: 1.2; }
     .hero-content p { font-size: 1.2rem; }
     .hero-content a.btn { margin-top: 1rem; }
 
-    .hero video {
+    .hero video, .hero img {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
@@ -68,30 +64,23 @@
     }
 
     .btn-outline-light:hover {
-      background: #fff;
-      color: #000;
-      border-color: #fff;
+      background: #fff; color: #000; border-color: #fff;
     }
 
     footer {
-      background: #111;
-      color: #ccc;
+      background: #111; color: #ccc;
     }
-
     footer a { color: #ddd; text-decoration: underline; }
 
     .mobile-search {
-      background: #000;
-      padding: 10px;
+      background: #000; padding: 10px;
     }
 
-    /* ✅ Updated scrolling top banner */
+    /* ✅ Top banner scroll */
     .top-banner {
-      background-color: #111;
-      color: #FFD700;
+      background: #111; color: #FFD700;
       font-weight: bold;
-      overflow: hidden;
-      white-space: nowrap;
+      overflow: hidden; white-space: nowrap;
     }
     .top-banner-text {
       display: inline-block;
@@ -103,14 +92,12 @@
       100% { transform: translateX(-100%); }
     }
 
+    /* ✅ Mobile hero adjustments */
     @media (max-width: 768px) {
-      .hero {
-        height: 50vh; /* shorter on mobile */
-      }
+      .hero { height: 50vh; }
       .hero-content h1 { font-size: 2rem; }
       .hero-content p { font-size: 1rem; }
     }
-
     @media (max-width: 480px) {
       .hero-content h1 { font-size: 1.5rem; }
       .hero-content p { font-size: 0.9rem; }
@@ -207,7 +194,7 @@
     </div>
   </div>
 
-  <!-- ✅ MESSAGES & CONTENT -->
+  <!-- ✅ MESSAGES & PAGE CONTENT -->
   <div class="container mt-4 mb-5">
     {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -219,19 +206,148 @@
     {% block content %}{% endblock %}
   </div>
 
-  <!-- ✅ FOOTER WITH SOCIALS -->
+  <!-- ✅ FOOTER -->
   <footer class="text-center py-4">
     &copy; 2025 Bin Ahmed Parfüm — Crafted Scents & Wax.
-    <br>
-    <a href="/know-your-perfume">Fragrance Guide</a> |
-    <a href="https://www.instagram.com/bin_ahmed_parfum" target="_blank">
-      <i class="fab fa-instagram"></i> Instagram
-    </a>
-    <br>
+    <br><a href="/know-your-perfume">Fragrance Guide</a> |
+    <a href="https://www.instagram.com/bin_ahmed_parfum" target="_blank"><i class="fab fa-instagram"></i> Instagram</a> |
     <a href="#"><i class="fab fa-facebook"></i> Facebook</a>
   </footer>
 
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- ✅ Live Chat Toggle Button -->
+<div id="chat-toggle" style="
+  position:fixed;bottom:20px;right:20px;width:50px;height:50px;
+  background:#007bff;color:#fff;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;cursor:pointer;z-index:10000;">
+  💬
+</div>
+
+<!-- ✅ Live Chat Box -->
+<div id="chat-box" style="
+  position:fixed;bottom:80px;right:20px;width:300px;max-height:400px;
+  background:#fff;border:1px solid #ddd;border-radius:8px;
+  box-shadow:0 0 10px rgba(0,0,0,0.2);display:none;
+  flex-direction:column;z-index:9999;">
+  <div style="background:#007bff;color:#fff;padding:10px;
+    border-radius:8px 8px 0 0;font-weight:bold;">
+    Live Chat 
+    <span style="float:right;cursor:pointer;" onclick="toggleChat(false)">✖️</span>
+  </div>
+
+  <!-- ✅ Message Area -->
+  <div id="chat-messages" style="
+    flex:1;overflow-y:auto;padding:10px;background:#f9f9f9;
+    font-size:14px;max-height:300px;"></div>
+
+  <!-- ✅ Input Area -->
+  <div style="padding:10px;border-top:1px solid #ddd;">
+    <div id="name-section">
+      <input type="text" id="chat-name" placeholder="Your Name"
+        class="form-control form-control-sm mb-2">
+      <button class="btn btn-sm btn-secondary w-100 mb-2"
+        onclick="saveName()">Start Chat</button>
+    </div>
+    <div id="chat-input-section" style="display:none;">
+      <input type="text" id="chat-input" placeholder="Type message..."
+        class="form-control form-control-sm mb-2" onkeypress="checkEnter(event)">
+      <button class="btn btn-sm btn-primary w-100"
+        onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const chatIntervalMs = 3000;  // Refresh every 3 sec
+  let conversationId = localStorage.getItem('chatConversationId');
+
+  function toggleChat(show) {
+    document.getElementById('chat-box').style.display = show ? 'flex' : 'none';
+  }
+
+  document.getElementById('chat-toggle').onclick = () => toggleChat(true);
+
+  function saveName() {
+    const name = document.getElementById('chat-name').value.trim();
+    if (!name) { alert('Please enter your name.'); return; }
+    localStorage.setItem('chatCustomerName', name);
+    document.getElementById('name-section').style.display = 'none';
+    document.getElementById('chat-input-section').style.display = 'block';
+
+    // Let server create conversation_id if needed on first send
+    loadMessages();
+  }
+
+  function checkEnter(event) {
+    if (event.key === 'Enter') { sendMessage(); }
+  }
+
+  function sendMessage() {
+    const name = localStorage.getItem('chatCustomerName');
+    const text = document.getElementById('chat-input').value.trim();
+    if (!name) { alert('Enter your name first.'); return; }
+    if (!text) return;
+
+    fetch('/send_message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_name: name,
+        message: text,
+        conversation_id: conversationId ? parseInt(conversationId) : null
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.conversation_id) {
+        conversationId = data.conversation_id;
+        localStorage.setItem('chatConversationId', conversationId);
+      }
+      document.getElementById('chat-input').value = '';
+      loadMessages();
+    })
+    .catch(err => console.error(err));
+  }
+
+  function loadMessages() {
+    if (!conversationId) return;
+
+    fetch('/get_messages?conversation_id=' + conversationId)
+      .then(res => res.json())
+      .then(data => {
+        const box = document.getElementById('chat-messages');
+        box.innerHTML = '';
+
+        if (data.closed) {
+          box.innerHTML = '<em>This chat has been closed by admin.</em>';
+          return;
+        }
+
+        data.forEach(msg => {
+          const sender = msg.is_admin ? 'Admin' : msg.customer_name;
+          box.innerHTML += `
+            <div style="margin-bottom:5px;">
+              <b>${sender}:</b> ${msg.message}
+            </div>`;
+        });
+
+        box.scrollTop = box.scrollHeight;
+      })
+      .catch(err => console.error(err));
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem('chatCustomerName')) {
+      document.getElementById('name-section').style.display = 'none';
+      document.getElementById('chat-input-section').style.display = 'block';
+    }
+    if (!conversationId) {
+      // Let server generate it on first send — keep null
+      conversationId = null;
+    }
+    loadMessages();
+    setInterval(loadMessages, chatIntervalMs);
+  });
+</script>
+
 </body>
 </html>
