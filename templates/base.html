@@ -5,352 +5,212 @@
   <title>{% block title %}Bin Ahmed Parfüm{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Google Fonts: Playfair Display for luxury vibe -->
+  <!-- Google Fonts & Tailwind -->
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
-
-  <!-- Font Awesome for social icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <!-- Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <style>
-    body {
-      font-family: 'Playfair Display', serif;
-      {% if not background %} background: #fdfdfd; {% endif %}
-    }
-
-    /* ✅ Logo styling */
-    .navbar-brand img {
-      max-height: 80px;
-      object-fit: contain;
-    }
-
-    /* ✅ Navbar links */
-    .nav-link {
-      color: #fff !important;
-      transition: color 0.3s ease;
-    }
-    .nav-link:hover {
-      color: gold !important;
-    }
-
-    /* ✅ Hero Section (shared for inner pages if needed) */
-    .hero {
-      position: relative;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-    }
-    .hero-content {
-      position: relative;
-      z-index: 2;
-      color: #fff;
-      max-width: 90%;
-      padding: 0 1rem;
-    }
-    .hero-content h1 { font-size: 3rem; line-height: 1.2; }
-    .hero-content p { font-size: 1.2rem; }
-    .hero-content a.btn { margin-top: 1rem; }
-
-    .hero video, .hero img {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      object-fit: cover;
-    }
-
-    .btn-outline-light:hover {
-      background: #fff; color: #000; border-color: #fff;
-    }
-
-    footer {
-      background: #111; color: #ccc;
-    }
-    footer a { color: #ddd; text-decoration: underline; }
-
-    .mobile-search {
-      background: #000; padding: 10px;
-    }
-
-    /* ✅ Top banner scroll */
-    .top-banner {
-      background: #111; color: #FFD700;
-      font-weight: bold;
-      overflow: hidden; white-space: nowrap;
-    }
-    .top-banner-text {
-      display: inline-block;
-      padding-left: 100%;
-      animation: scroll-left 20s linear infinite;
-    }
-    @keyframes scroll-left {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-100%); }
-    }
-
-    /* ✅ Mobile hero adjustments */
-    @media (max-width: 768px) {
-      .hero { height: 50vh; }
-      .hero-content h1 { font-size: 2rem; }
-      .hero-content p { font-size: 1rem; }
-    }
-    @media (max-width: 480px) {
-      .hero-content h1 { font-size: 1.5rem; }
-      .hero-content p { font-size: 0.9rem; }
-    }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
+<body class="font-[Playfair Display] {% if not background %}bg-white{% endif %}"
+      {% if background %}
+        style="background: url('{{ url_for('static', filename='uploads/backgrounds/' ~ background.filename) }}') center/cover no-repeat; background-attachment: fixed;"
+      {% endif %}>
 
-<body 
-  {% if background %}
-    style="background: url('{{ url_for('static', filename='uploads/backgrounds/' ~ background.filename) }}') center/cover no-repeat; background-attachment: fixed;"
-  {% endif %}>
-
-  <!-- ✅ Smooth Scrolling Top Banner -->
-  <div class="text-center py-2 px-2 top-banner">
-    {% if top_banner %}
-      <div class="top-banner-text">{{ top_banner|safe }}</div>
-    {% else %}
-      <div class="top-banner-text">
-        Free Delivery for Orders Above 4000 | 15 Days Return | New Arrivals Available
-      </div>
-    {% endif %}
+  <!-- 🔝 Top Banner -->
+  <div class="text-center py-2 bg-black text-yellow-400 text-sm whitespace-nowrap overflow-hidden">
+    <div class="inline-block animate-marquee">
+      {% if top_banner %}
+        {{ top_banner|safe }}
+      {% else %}
+        Free Delivery Over PKR 4000 | 15 Days Return | New Arrivals In Stock
+      {% endif %}
+    </div>
   </div>
 
-  <!-- ✅ NAVBAR -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-      <button class="btn btn-outline-light me-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
-        ☰
-      </button>
-
-      <a class="navbar-brand" href="/">
-        {% if logo %}
-          <img src="{{ url_for('static', filename='uploads/logos/' ~ logo.filename) }}" alt="Bin Ahmed Parfüm Logo">
-        {% else %}
-          Bin Ahmed Parfüm
-        {% endif %}
-      </a>
-
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto gap-3 text-center">
-          <li class="nav-item"><a class="nav-link" href="/about">About</a></li>
-          <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
-          <li class="nav-item">
-            <a class="nav-link" href="/wishlist">❤️ Wishlist
-              {% if session['wishlist'] and session['wishlist']|length > 0 %}
-                <span class="badge bg-danger">{{ session['wishlist']|length }}</span>
-              {% endif %}
-            </a>
-          </li>
-          <li class="nav-item"><a class="nav-link" href="/cart">🛒 Cart</a></li>
-          <li class="nav-item d-none d-lg-block">
-            <form class="d-flex ms-3">
-              <input class="form-control form-control-sm me-2" type="search" placeholder="Search" aria-label="Search">
-              <button class="btn btn-outline-light btn-sm" type="submit">Search</button>
-            </form>
-          </li>
-        </ul>
+  <!-- 🚀 Navbar -->
+  <nav class="bg-gray-900 text-white">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <!-- Left: Logo + Menu -->
+      <div class="flex items-center gap-4">
+        <button onclick="document.getElementById('sidebarMenu').classList.remove('hidden')" class="lg:hidden text-xl">☰</button>
+        <a href="/" class="font-bold text-xl flex items-center">
+          {% if logo %}
+            <img src="{{ url_for('static', filename='uploads/logos/' ~ logo.filename) }}" alt="Logo" class="h-10 object-contain">
+          {% else %} Bin Ahmed Parfüm {% endif %}
+        </a>
       </div>
+
+      <!-- Right: Menu -->
+      <ul class="hidden lg:flex gap-6 items-center text-sm">
+        <li><a href="/about" class="hover:text-yellow-400">About</a></li>
+        <li><a href="/contact" class="hover:text-yellow-400">Contact</a></li>
+        <li class="relative">
+          <a href="/wishlist" class="hover:text-yellow-400">❤️ Wishlist</a>
+          {% if session['wishlist'] and session['wishlist']|length > 0 %}
+            <span class="absolute -top-2 -right-3 bg-red-600 text-white text-xs px-1.5 rounded-full">
+              {{ session['wishlist']|length }}
+            </span>
+          {% endif %}
+        </li>
+        <li><a href="/cart" class="hover:text-yellow-400">🛒 Cart</a></li>
+        <li>
+          <form class="flex items-center">
+            <input type="search" placeholder="Search" class="rounded px-2 py-1 text-black text-sm w-32">
+            <button type="submit" class="ml-2 text-sm border px-3 py-1 rounded hover:bg-white hover:text-black">Search</button>
+          </form>
+        </li>
+      </ul>
     </div>
   </nav>
 
-  <!-- ✅ MOBILE SEARCH -->
-  <div class="mobile-search d-lg-none">
-    <input type="search" class="form-control" placeholder="Search perfumes..." aria-label="Search">
+  <!-- 🔍 Mobile Search -->
+  <div class="block lg:hidden bg-black px-4 py-2">
+    <input type="search" placeholder="Search perfumes..." class="w-full p-2 rounded text-sm">
   </div>
 
-  <!-- ✅ OFFCANVAS SIDEBAR -->
-  <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="sidebarMenu">
-    <div class="offcanvas-header">
-      <h5 class="offcanvas-title">Categories & More</h5>
-      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-    </div>
-    <div class="offcanvas-body">
-      {% if categories %}
-        <ul class="list-group list-group-flush mb-4">
+  <!-- 📱 Sidebar -->
+  <div id="sidebarMenu" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50">
+    <div class="bg-gray-900 w-72 max-w-full h-full p-4 overflow-y-auto">
+      <button class="absolute top-4 right-4 text-white text-lg" onclick="document.getElementById('sidebarMenu').classList.add('hidden')">✖</button>
+      <h2 class="text-xl mb-4 text-white font-semibold">Browse</h2>
+      <ul class="space-y-2">
+        {% if categories %}
           {% for cat in categories %}
-            <li class="list-group-item bg-dark border-0">
-              <a href="{{ url_for('view_category', category_id=cat.id) }}" class="text-white text-decoration-none">
-                {{ cat.name }}
-              </a>
-            </li>
+            <li><a href="{{ url_for('view_category', category_id=cat.id) }}" class="text-white hover:text-yellow-400 block">{{ cat.name }}</a></li>
           {% endfor %}
-        </ul>
-      {% else %}
-        <p>No categories yet.</p>
-      {% endif %}
-      <a class="d-block mb-2 text-white text-decoration-none" href="/know-your-perfume">📖 Know Your Perfume</a>
-      <a class="d-block mb-2 text-white text-decoration-none" href="/track">🚚 Track Order</a>
-      <a class="nav-link text-white" href="/fragrance-quiz">✨ Fragrance Quiz</a>
+        {% else %}
+          <li><p class="text-sm text-gray-300">No categories added yet.</p></li>
+        {% endif %}
+      </ul>
+      <div class="mt-6 space-y-3 border-t border-gray-700 pt-4">
+        <a href="/know-your-perfume" class="text-white block">📖 Know Your Perfume</a>
+        <a href="/track" class="text-white block">🚚 Track Order</a>
+        <a href="/fragrance-quiz" class="text-white block">✨ Fragrance Quiz</a>
+      </div>
     </div>
   </div>
 
-  <!-- ✅ MESSAGES & PAGE CONTENT -->
-  <div class="container mt-4 mb-5">
+  <!-- 📦 Main Page Content -->
+  <div class="max-w-7xl mx-auto px-4 mt-6">
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         {% for msg in messages %}
-          <div class="alert alert-success">{{ msg }}</div>
+          <div class="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded mb-4 text-sm">{{ msg }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
     {% block content %}{% endblock %}
   </div>
 
-  <!-- ✅ FOOTER -->
-  <footer class="text-center py-4">
-    &copy; 2025 Bin Ahmed Parfüm — Crafted Scents & Wax.
-    <br><a href="/know-your-perfume">Fragrance Guide</a> |
-    <a href="https://www.instagram.com/bin_ahmed_parfum" target="_blank"><i class="fab fa-instagram"></i> Instagram</a> |
-    <a href="#"><i class="fab fa-facebook"></i> Facebook</a>
+  <!-- 👣 Footer -->
+  <footer class="bg-gray-900 text-white py-6 text-center text-sm mt-12">
+    &copy; 2025 Bin Ahmed Parfüm — Crafted Scents & Wax.<br>
+    <a href="/know-your-perfume" class="underline hover:text-yellow-400">Fragrance Guide</a> |
+    <a href="https://www.instagram.com/bin_ahmed_parfum" target="_blank" class="underline hover:text-yellow-400">
+      <i class="fab fa-instagram"></i> Instagram
+    </a> |
+    <a href="#" class="underline hover:text-yellow-400">
+      <i class="fab fa-facebook"></i> Facebook
+    </a>
   </footer>
 
-<!-- ✅ Live Chat Toggle Button -->
-<div id="chat-toggle" style="
-  position:fixed;bottom:20px;right:20px;width:50px;height:50px;
-  background:#007bff;color:#fff;border-radius:50%;display:flex;
-  align-items:center;justify-content:center;cursor:pointer;z-index:10000;">
-  💬
-</div>
+  <!-- 💬 Live Chat Toggle -->
+  <div id="chat-toggle" class="fixed bottom-5 right-5 w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg z-50">💬</div>
 
-<!-- ✅ Live Chat Box -->
-<div id="chat-box" style="
-  position:fixed;bottom:80px;right:20px;width:300px;max-height:400px;
-  background:#fff;border:1px solid #ddd;border-radius:8px;
-  box-shadow:0 0 10px rgba(0,0,0,0.2);display:none;
-  flex-direction:column;z-index:9999;">
-  <div style="background:#007bff;color:#fff;padding:10px;
-    border-radius:8px 8px 0 0;font-weight:bold;">
-    Live Chat 
-    <span style="float:right;cursor:pointer;" onclick="toggleChat(false)">✖️</span>
-  </div>
-
-  <!-- ✅ Message Area -->
-  <div id="chat-messages" style="
-    flex:1;overflow-y:auto;padding:10px;background:#f9f9f9;
-    font-size:14px;max-height:300px;"></div>
-
-  <!-- ✅ Input Area -->
-  <div style="padding:10px;border-top:1px solid #ddd;">
-    <div id="name-section">
-      <input type="text" id="chat-name" placeholder="Your Name"
-        class="form-control form-control-sm mb-2">
-      <button class="btn btn-sm btn-secondary w-100 mb-2"
-        onclick="saveName()">Start Chat</button>
+  <!-- 💬 Live Chat Box -->
+  <div id="chat-box" class="hidden fixed bottom-24 right-5 w-80 max-h-[80vh] bg-white border border-gray-300 rounded-xl shadow-lg flex-col z-50">
+    <div class="bg-blue-600 text-white px-4 py-2 flex justify-between items-center rounded-t-xl font-semibold">Live Chat
+      <span class="cursor-pointer" onclick="toggleChat(false)">✖️</span>
     </div>
-    <div id="chat-input-section" style="display:none;">
-      <input type="text" id="chat-input" placeholder="Type message..."
-        class="form-control form-control-sm mb-2" onkeypress="checkEnter(event)">
-      <button class="btn btn-sm btn-primary w-100"
-        onclick="sendMessage()">Send</button>
+    <div id="chat-messages" class="flex-1 overflow-y-auto p-3 text-sm bg-gray-100 h-60"></div>
+    <div class="p-3 border-t text-sm">
+      <div id="name-section">
+        <input type="text" id="chat-name" placeholder="Your Name" class="w-full p-2 rounded border mb-2">
+        <button class="w-full bg-gray-700 text-white py-1 rounded" onclick="saveName()">Start Chat</button>
+      </div>
+      <div id="chat-input-section" class="hidden">
+        <input type="text" id="chat-input" placeholder="Type message..." class="w-full p-2 rounded border mb-2" onkeypress="checkEnter(event)">
+        <button class="w-full bg-blue-600 text-white py-1 rounded" onclick="sendMessage()">Send</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script>
-  const chatIntervalMs = 3000;  // Refresh every 3 sec
-  let conversationId = localStorage.getItem('chatConversationId');
+  <!-- ⚙️ Chat Logic -->
+  <script>
+    const chatIntervalMs = 3000;
+    let conversationId = localStorage.getItem('chatConversationId');
 
-  function toggleChat(show) {
-    document.getElementById('chat-box').style.display = show ? 'flex' : 'none';
-  }
+    function toggleChat(show) {
+      document.getElementById('chat-box').style.display = show ? 'flex' : 'none';
+    }
+    document.getElementById('chat-toggle').onclick = () => toggleChat(true);
 
-  document.getElementById('chat-toggle').onclick = () => toggleChat(true);
-
-  function saveName() {
-    const name = document.getElementById('chat-name').value.trim();
-    if (!name) { alert('Please enter your name.'); return; }
-    localStorage.setItem('chatCustomerName', name);
-    document.getElementById('name-section').style.display = 'none';
-    document.getElementById('chat-input-section').style.display = 'block';
-
-    // Let server create conversation_id if needed on first send
-    loadMessages();
-  }
-
-  function checkEnter(event) {
-    if (event.key === 'Enter') { sendMessage(); }
-  }
-
-  function sendMessage() {
-    const name = localStorage.getItem('chatCustomerName');
-    const text = document.getElementById('chat-input').value.trim();
-    if (!name) { alert('Enter your name first.'); return; }
-    if (!text) return;
-
-    fetch('/send_message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customer_name: name,
-        message: text,
-        conversation_id: conversationId ? parseInt(conversationId) : null
-      })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.conversation_id) {
-        conversationId = data.conversation_id;
-        localStorage.setItem('chatConversationId', conversationId);
-      }
-      document.getElementById('chat-input').value = '';
-      loadMessages();
-    })
-    .catch(err => console.error(err));
-  }
-
-  function loadMessages() {
-    if (!conversationId) return;
-
-    fetch('/get_messages?conversation_id=' + conversationId)
-      .then(res => res.json())
-      .then(data => {
-        const box = document.getElementById('chat-messages');
-        box.innerHTML = '';
-
-        if (data.closed) {
-          box.innerHTML = '<em>This chat has been closed by admin.</em>';
-          return;
-        }
-
-        data.forEach(msg => {
-          const sender = msg.is_admin ? 'Admin' : msg.customer_name;
-          box.innerHTML += `
-            <div style="margin-bottom:5px;">
-              <b>${sender}:</b> ${msg.message}
-            </div>`;
-        });
-
-        box.scrollTop = box.scrollHeight;
-      })
-      .catch(err => console.error(err));
-  }
-
-  window.addEventListener('DOMContentLoaded', () => {
-    if (localStorage.getItem('chatCustomerName')) {
+    function saveName() {
+      const name = document.getElementById('chat-name').value.trim();
+      if (!name) { alert('Please enter your name.'); return; }
+      localStorage.setItem('chatCustomerName', name);
       document.getElementById('name-section').style.display = 'none';
       document.getElementById('chat-input-section').style.display = 'block';
+      loadMessages();
     }
-    if (!conversationId) {
-      // Let server generate it on first send — keep null
-      conversationId = null;
+
+    function checkEnter(event) {
+      if (event.key === 'Enter') { sendMessage(); }
     }
-    loadMessages();
-    setInterval(loadMessages, chatIntervalMs);
-  });
-</script>
 
-<!-- Bootstrap Bundle with Popper (required for navbar toggler & offcanvas) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    function sendMessage() {
+      const name = localStorage.getItem('chatCustomerName');
+      const text = document.getElementById('chat-input').value.trim();
+      if (!text) return;
 
+      fetch('/send_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_name: name,
+          message: text,
+          conversation_id: conversationId ? parseInt(conversationId) : null
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.conversation_id) {
+          conversationId = data.conversation_id;
+          localStorage.setItem('chatConversationId', conversationId);
+        }
+        document.getElementById('chat-input').value = '';
+        loadMessages();
+      })
+      .catch(err => console.error(err));
+    }
+
+    function loadMessages() {
+      if (!conversationId) return;
+      fetch('/get_messages?conversation_id=' + conversationId)
+        .then(res => res.json())
+        .then(data => {
+          const box = document.getElementById('chat-messages');
+          box.innerHTML = '';
+          if (data.closed) {
+            box.innerHTML = '<em>This chat has been closed by admin.</em>';
+            return;
+          }
+          data.forEach(msg => {
+            const sender = msg.is_admin ? 'Admin' : msg.customer_name;
+            box.innerHTML += `<div class='mb-2'><strong>${sender}:</strong> ${msg.message}</div>`;
+          });
+          box.scrollTop = box.scrollHeight;
+        })
+        .catch(err => console.error(err));
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (localStorage.getItem('chatCustomerName')) {
+        document.getElementById('name-section').style.display = 'none';
+        document.getElementById('chat-input-section').style.display = 'block';
+      }
+      loadMessages();
+      setInterval(loadMessages, chatIntervalMs);
+    });
+  </script>
 </body>
 </html>

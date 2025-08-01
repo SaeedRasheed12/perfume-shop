@@ -1,51 +1,44 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container my-5">
-  <div class="card shadow rounded-4 p-5 text-center mx-auto" style="max-width: 600px;">
-    <h2 class="mb-4">Contact Bin Ahmed Parfüm</h2>
-    <p class="lead mb-4">
-      We’d love to hear from you — whether you have a question about our fragrances,
-      need help with an order, or just want to share your experience.
+<section class="max-w-2xl mx-auto px-4 py-12">
+  <div class="bg-white shadow-xl rounded-2xl p-8 text-center">
+    <h2 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-6">📬 Contact Bin Ahmed Parfüm</h2>
+
+    <p class="text-lg text-gray-600 mb-6">
+      We'd love to hear from you — whether you have a question about our fragrances,
+      need help with an order, or simply want to share your experience.
     </p>
-    <p>
-      📧 <strong>Email:</strong>
-      <a href="mailto:info@binahmedparfum.pk" class="contact-link">
-        info@binahmedparfum.pk
-      </a>
-    </p>
-    <p>
-      📞 <strong>Phone:</strong>
-      <a href="tel:+923092986200" class="contact-link">
-        0309 2986200
-      </a>
-    </p>
-    <p>
-      📷 <strong>Instagram:</strong>
-      <a href="https://www.instagram.com/bin_ahmed_parfum?utm_source=qr&igsh=ZGV6dm91djFtbjI0"
-         target="_blank"
-         class="contact-link">
-        @bin_ahmed_parfum
-      </a>
-    </p>
-    <p class="mt-4 mb-0">
-      Our team typically replies within 24 hours.<br>
-      Thank you for choosing Bin Ahmed Parfüm.
+
+    <div class="space-y-4 text-base text-gray-700">
+      <p>
+        📧 <span class="font-semibold">Email:</span>
+        <a href="mailto:info@binahmedparfum.pk"
+           class="text-gray-800 hover:text-amber-600 underline transition">
+          info@binahmedparfum.pk
+        </a>
+      </p>
+      <p>
+        📞 <span class="font-semibold">Phone:</span>
+        <a href="tel:+923092986200"
+           class="text-gray-800 hover:text-amber-600 underline transition">
+          0309 2986200
+        </a>
+      </p>
+      <p>
+        📷 <span class="font-semibold">Instagram:</span>
+        <a href="https://www.instagram.com/bin_ahmed_parfum?utm_source=qr&igsh=ZGV6dm91djFtbjI0"
+           target="_blank"
+           class="text-gray-800 hover:text-amber-600 underline transition">
+          @bin_ahmed_parfum
+        </a>
+      </p>
+    </div>
+
+    <p class="mt-8 text-gray-500 text-sm">
+      Our team typically responds within 24 hours.<br>
+      Thank you for choosing <span class="font-semibold text-gray-700">Bin Ahmed Parfüm</span>.
     </p>
   </div>
-</div>
-
-<!-- ✅ Soft hover effect for contact links -->
-<style>
-  .contact-link {
-    text-decoration: none;
-    color: #000;
-    transition: color 0.3s ease, text-decoration 0.3s ease;
-  }
-
-  .contact-link:hover {
-    color: #bfa37c; /* A warm gold accent */
-    text-decoration: underline;
-  }
-</style>
+</section>
 {% endblock %}

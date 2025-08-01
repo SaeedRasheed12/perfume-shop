@@ -1,30 +1,30 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container py-5">
-  <h2 class="mb-4">Your Cart</h2>
+<div class="max-w-5xl mx-auto px-4 py-10">
+  <h2 class="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">🛒 Your Cart</h2>
 
   {% if cart %}
-    <div class="table-responsive shadow rounded-4 overflow-hidden">
-      <table class="table table-striped align-middle mb-0">
-        <thead class="table-dark">
+    <div class="overflow-x-auto rounded-2xl shadow ring-1 ring-gray-200">
+      <table class="min-w-full divide-y divide-gray-200 bg-white">
+        <thead class="bg-gray-800 text-white text-sm sm:text-base">
           <tr>
-            <th>Item</th>
-            <th class="text-center">Qty</th>
-            <th class="text-end">Subtotal</th>
-            <th class="text-center">Remove</th>
+            <th class="text-left px-4 py-3">Item</th>
+            <th class="text-center px-4 py-3">Qty</th>
+            <th class="text-right px-4 py-3">Subtotal</th>
+            <th class="text-center px-4 py-3">Remove</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-gray-100 text-sm sm:text-base">
           {% for item in cart %}
-          <tr>
-            <td>{{ item.name }}</td>
-            <td class="text-center">{{ item.quantity }}</td>
-            <td class="text-end">PKR {{ '%.2f'|format(item.price * item.quantity) }}</td>
-            <td class="text-center">
+          <tr class="hover:bg-gray-50 transition">
+            <td class="px-4 py-3 font-medium text-gray-700 whitespace-nowrap">{{ item.name }}</td>
+            <td class="text-center px-4 py-3">{{ item.quantity }}</td>
+            <td class="text-right px-4 py-3 text-gray-600">PKR {{ '%.2f'|format(item.price * item.quantity) }}</td>
+            <td class="text-center px-4 py-3">
               <a href="{{ url_for('remove_from_cart', product_id=item.id) }}"
-                 class="btn btn-sm btn-outline-danger"
-                 onclick="return confirm('Remove this item from your cart?');">
+                 onclick="return confirm('Remove this item from your cart?');"
+                 class="text-red-600 hover:bg-red-100 border border-red-500 px-3 py-1 rounded text-xs sm:text-sm">
                 Remove
               </a>
             </td>
@@ -34,28 +34,34 @@
       </table>
     </div>
 
-    <!-- ✅ Total, Spin & Checkout -->
-    <div class="text-end mt-4">
-      <h4 class="fw-bold">Total: <span class="text-primary">PKR {{ '%.2f'|format(total) }}</span></h4>
+    <!-- ✅ Total + Buttons -->
+    <div class="text-right mt-6 space-y-4">
+      <h4 class="text-xl font-bold text-gray-700">
+        Total:
+        <span class="text-indigo-600">PKR {{ '%.2f'|format(total) }}</span>
+      </h4>
 
-      <!-- 🎉 Direct Spin Button -->
-      <a href="{{ url_for('spin') }}" class="btn btn-outline-success btn-sm mt-2 mb-3">
-        🎉 Click to Spin & Get Discount!
-      </a>
+      <div class="flex flex-col sm:flex-row justify-end items-center gap-3 flex-wrap">
+        <a href="{{ url_for('spin') }}"
+           class="text-green-700 border border-green-700 hover:bg-green-700 hover:text-white px-4 py-2 rounded text-sm font-medium w-full sm:w-auto text-center">
+          🎉 Click to Spin & Get Discount!
+        </a>
 
-      <a href="{{ url_for('checkout') }}" class="btn btn-dark btn-lg">Proceed to Checkout</a>
+        <a href="{{ url_for('checkout') }}"
+           class="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2 rounded text-sm font-semibold w-full sm:w-auto text-center">
+          Proceed to Checkout
+        </a>
+      </div>
     </div>
 
   {% else %}
-    <div class="alert alert-info shadow-sm">Your cart is empty.</div>
-    <a href="{{ url_for('index') }}" class="btn btn-outline-dark mt-3">Continue Shopping</a>
+    <div class="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-md mb-4 text-sm sm:text-base">
+      Your cart is empty.
+    </div>
+    <a href="{{ url_for('index') }}"
+       class="inline-block text-gray-700 border border-gray-700 px-4 py-2 rounded hover:bg-gray-700 hover:text-white text-sm sm:text-base">
+      Continue Shopping
+    </a>
   {% endif %}
 </div>
-
-<!-- ✅ Subtle hover styles -->
-<style>
-  .btn-outline-danger:hover { background: #dc3545; color: #fff; }
-  .btn-outline-success:hover { background: #198754; color: #fff; }
-  .table-striped tbody tr:hover { background-color: #f9f9f9; }
-</style>
 {% endblock %}

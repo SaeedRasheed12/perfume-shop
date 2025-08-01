@@ -1,73 +1,79 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container py-5">
-  <div class="row align-items-center">
-    <!-- ✅ Product Image -->
-    <div class="col-md-6 mb-4 mb-md-0">
+<section class="max-w-6xl mx-auto px-4 py-10">
+  <div class="grid md:grid-cols-2 gap-10 items-start">
+    <!-- 🖼️ Product Image -->
+    <div>
       <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}"
-           alt="{{ product.name }} image"
-           class="img-fluid rounded-4 shadow"
-           style="object-fit: cover; max-height: 500px; width: 100%;">
+           alt="{{ product.name }}"
+           class="rounded-2xl shadow-md w-full h-auto max-h-[500px] object-cover">
     </div>
 
-    <!-- ✅ Product Details -->
-    <div class="col-md-6">
-      <h2 class="fw-bold mb-3">{{ product.name }}</h2>
-      <h4 class="text-muted mb-3">PKR {{ '%.2f'|format(product.price) }}</h4>
-      <p class="mb-4">{{ product.description }}</p>
+    <!-- 📦 Product Info -->
+    <div>
+      <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">{{ product.name }}</h2>
+      <h4 class="text-lg sm:text-xl text-gray-500 mb-4">PKR {{ '%.2f'|format(product.price) }}</h4>
+      <p class="text-gray-700 mb-6 leading-relaxed">{{ product.description }}</p>
 
-      <!-- ✅ Add to Cart -->
+      <!-- 🛒 Add to Cart -->
       <a href="{{ url_for('add_to_cart', product_id=product.id) }}"
-         class="btn btn-dark px-4 py-2 w-100">
+         class="block bg-gray-800 hover:bg-black text-white text-center py-3 px-4 rounded-md font-semibold transition">
         🛒 Add to Cart
       </a>
 
-      <!-- ✅ Back link -->
+      <!-- 🔙 Back -->
       <div class="mt-4">
         <a href="{{ url_for('index') }}"
-           class="text-decoration-none text-secondary back-link">&larr; Back to Shop</a>
+           class="text-sm text-gray-600 hover:text-black hover:underline transition">
+          &larr; Back to Shop
+        </a>
       </div>
     </div>
   </div>
 
-  <!-- ✅ Reviews Section -->
-  <div class="card mt-5 shadow-sm">
-    <div class="card-header">
-      <h4 class="mb-0">Customer Reviews</h4>
+  <!-- 🌟 Customer Reviews -->
+  <div class="mt-16 bg-white rounded-xl shadow-md overflow-hidden">
+    <div class="bg-gray-100 px-6 py-4 border-b">
+      <h4 class="text-lg font-semibold text-gray-800">Customer Reviews</h4>
     </div>
-    <div class="card-body">
+    <div class="p-6 space-y-4 text-sm sm:text-base">
       {% if reviews %}
         {% for rev in reviews %}
-          <div class="mb-3 border-bottom pb-2">
-            <strong>{{ rev.customer_name }}</strong>
-            <span class="text-warning">
-              {% for i in range(rev.rating) %}★{% endfor %}
-              {% for i in range(5 - rev.rating) %}☆{% endfor %}
-            </span>
-            <p class="mb-1">{{ rev.comment }}</p>
-            <small class="text-muted">{{ rev.created_at }}</small>
+          <div class="border-b pb-4">
+            <div class="flex justify-between items-center mb-1">
+              <strong class="text-gray-800">{{ rev.customer_name }}</strong>
+              <span class="text-yellow-500 text-sm">
+                {% for i in range(rev.rating) %}★{% endfor %}
+                {% for i in range(5 - rev.rating) %}☆{% endfor %}
+              </span>
+            </div>
+            <p class="text-gray-600 mb-1">{{ rev.comment }}</p>
+            <small class="text-gray-400">{{ rev.created_at }}</small>
           </div>
         {% endfor %}
       {% else %}
-        <p>No reviews yet. Be the first to review!</p>
+        <p class="text-gray-500">No reviews yet. Be the first to review!</p>
       {% endif %}
     </div>
   </div>
 
-  <!-- ✅ Add Review Form -->
-  <div class="card mt-3 shadow-sm">
-    <div class="card-header">
-      <h5 class="mb-0">Leave a Review</h5>
+  <!-- ✍️ Add Review -->
+  <div class="mt-8 bg-white rounded-xl shadow-md">
+    <div class="bg-gray-100 px-6 py-4 border-b">
+      <h5 class="text-md font-semibold text-gray-800">Leave a Review</h5>
     </div>
-    <div class="card-body">
-      <form method="POST" action="{{ url_for('product_detail', product_id=product.id) }}">
-        <div class="mb-2">
-          <input type="text" name="customer_name" class="form-control" placeholder="Your Name" required>
-        </div>
-        <div class="mb-2">
-          <label for="rating">Rating:</label>
-          <select name="rating" id="rating" class="form-select" required>
+    <div class="p-6">
+      <form method="POST" action="{{ url_for('product_detail', product_id=product.id) }}"
+            class="space-y-4 text-sm sm:text-base">
+        <input type="text" name="customer_name"
+               class="w-full border border-gray-300 rounded px-3 py-2"
+               placeholder="Your Name" required>
+
+        <div>
+          <label for="rating" class="block mb-1 font-medium text-sm text-gray-700">Rating:</label>
+          <select name="rating" id="rating" required
+                  class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
             <option value="">Select...</option>
             <option value="5">★★★★★ (5)</option>
             <option value="4">★★★★☆ (4)</option>
@@ -76,28 +82,17 @@
             <option value="1">★☆☆☆☆ (1)</option>
           </select>
         </div>
-        <div class="mb-2">
-          <textarea name="comment" class="form-control" placeholder="Write your review..." rows="3"></textarea>
-        </div>
-        <button type="submit" class="btn btn-dark w-100">Submit Review</button>
+
+        <textarea name="comment" rows="3"
+                  class="w-full border border-gray-300 rounded px-3 py-2"
+                  placeholder="Write your review..."></textarea>
+
+        <button type="submit"
+                class="w-full bg-gray-800 hover:bg-black text-white font-semibold py-2 px-4 rounded transition">
+          Submit Review
+        </button>
       </form>
     </div>
   </div>
-</div>
-
-<!-- ✅ Small UX polish -->
-<style>
-  .btn-dark:hover {
-    opacity: 0.9;
-  }
-  .back-link:hover {
-    color: #000;
-    text-decoration: underline;
-  }
-  @media (max-width: 768px) {
-    .col-md-6 h2 { font-size: 1.75rem; }
-    .col-md-6 h4 { font-size: 1.2rem; }
-    .col-md-6 p { font-size: 1rem; }
-  }
-</style>
+</section>
 {% endblock %}
