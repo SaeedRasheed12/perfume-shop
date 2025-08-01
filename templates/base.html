@@ -15,16 +15,29 @@
         style="background: url('{{ url_for('static', filename='uploads/backgrounds/' ~ background.filename) }}') center/cover no-repeat; background-attachment: fixed;"
       {% endif %}>
 
-  <!-- 🔝 Top Banner -->
-  <div class="text-center py-2 bg-black text-yellow-400 text-sm whitespace-nowrap overflow-hidden">
-    <div class="inline-block animate-marquee">
-      {% if top_banner %}
-        {{ top_banner|safe }}
-      {% else %}
-        Free Delivery Over PKR 4000 | 15 Days Return | New Arrivals In Stock
-      {% endif %}
-    </div>
+<!-- 🔝 Moving Top Banner -->
+<div class="text-center py-2 bg-black text-yellow-400 text-sm whitespace-nowrap overflow-hidden relative">
+  <div class="animate-marquee inline-block">
+    {% if top_banner %}
+      {{ top_banner|safe }}
+    {% else %}
+      Free Delivery Over PKR 4000 &nbsp; | &nbsp; 15 Days Return &nbsp; | &nbsp; New Arrivals In Stock
+    {% endif %}
   </div>
+</div>
+
+<style>
+  @keyframes marquee {
+    0%   { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+
+  .animate-marquee {
+    animation: marquee 18s linear infinite;
+    display: inline-block;
+    min-width: 100%;
+  }
+</style>
 
   <!-- 🚀 Navbar -->
   <nav class="bg-gray-900 text-white">
