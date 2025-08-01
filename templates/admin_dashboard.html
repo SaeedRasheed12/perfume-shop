@@ -1,124 +1,124 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container py-5">
-  <h2 class="mb-4">Admin Dashboard</h2>
+<div class="px-4 sm:px-6 lg:px-8 py-8">
+  <h2 class="text-2xl sm:text-3xl font-bold mb-2">Admin Dashboard</h2>
 
-  <p class="text-muted">
+  <p class="text-gray-600 mb-6">
     Welcome, Admin! Manage your products, hero banner, logo, background,
     orders, categories, coupons, delivery fee, Know Your Perfume guide,
     and the Top Banner announcement.
   </p>
 
-    <!-- ✅ Sales Snapshot -->
-  <div class="row mb-5">
-    <div class="col-md-4 mb-3">
-      <div class="card text-center shadow-sm rounded-3">
-        <div class="card-body">
-          <h6 class="card-title fw-semibold">Total Orders This Month</h6>
-          <h3 class="mb-0">{{ total_orders }}</h3>
-        </div>
-      </div>
+  <!-- ✅ Sales Snapshot -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+    <div class="bg-white shadow rounded-xl p-5 text-center">
+      <h6 class="text-sm font-medium text-gray-500">Total Orders This Month</h6>
+      <h3 class="text-2xl font-bold mt-2">{{ total_orders }}</h3>
     </div>
 
-    <div class="col-md-4 mb-3">
-      <div class="card text-center shadow-sm rounded-3">
-        <div class="card-body">
-          <h6 class="card-title fw-semibold">Revenue This Month</h6>
-          <h3 class="mb-0">PKR {{ '%.2f'|format(total_revenue) }}</h3>
-        </div>
-      </div>
+    <div class="bg-white shadow rounded-xl p-5 text-center">
+      <h6 class="text-sm font-medium text-gray-500">Revenue This Month</h6>
+      <h3 class="text-2xl font-bold mt-2">PKR {{ '%.2f'|format(total_revenue) }}</h3>
     </div>
 
-    <div class="col-md-4 mb-3">
-      <div class="card text-center shadow-sm rounded-3">
-        <div class="card-body">
-          <h6 class="card-title fw-semibold">Top-Selling Scents</h6>
-          {% if top_products %}
-            <ul class="list-group list-group-flush text-start">
-              {% for product in top_products %}
-                <li class="list-group-item d-flex justify-content-between">
-                  {{ product.name }}
-                  <span class="badge bg-dark">{{ product.total_sold }}</span>
-                </li>
-              {% endfor %}
-            </ul>
-          {% else %}
-            <p class="text-muted mb-0">No sales yet this month.</p>
-          {% endif %}
-        </div>
-      </div>
+    <div class="bg-white shadow rounded-xl p-5">
+      <h6 class="text-sm font-medium text-center text-gray-500 mb-2">Top-Selling Scents</h6>
+      {% if top_products %}
+        <ul class="divide-y text-sm">
+          {% for product in top_products %}
+          <li class="flex justify-between py-2">
+            <span>{{ product.name }}</span>
+            <span class="bg-gray-800 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+              {{ product.total_sold }}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-center text-gray-400">No sales yet this month.</p>
+      {% endif %}
     </div>
   </div>
 
   <!-- ✅ Quick Actions -->
-  <div class="mb-4 d-flex flex-wrap gap-2">
-    <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-primary">
+  <div class="flex flex-wrap gap-3 mb-10">
+    <a href="{{ url_for('admin_orders') }}"
+       class="inline-flex items-center justify-center px-4 py-2 bg-white border border-blue-500 text-blue-600 hover:bg-blue-50 rounded-md shadow-sm">
       📦 View All Orders
     </a>
-    <a href="{{ url_for('admin_reviews') }}" class="btn btn-outline-dark mb-3">
-  📝 Manage Customer Reviews
+    <a href="{{ url_for('admin_reviews') }}"
+       class="inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-800 text-gray-800 hover:bg-gray-100 rounded-md shadow-sm">
+      📝 Manage Customer Reviews
     </a>
-    <a href="{{ url_for('admin_categories') }}" class="btn btn-outline-secondary">
+    <a href="{{ url_for('admin_categories') }}"
+       class="inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-500 text-gray-700 hover:bg-gray-100 rounded-md shadow-sm">
       📂 Manage Categories
     </a>
   </div>
-
   
 <!-- ✅ Admin Dashboard: Live Chat Table -->
-<div class="card p-4 mb-4 shadow rounded-3">
-  <h4 class="mb-3">📨 Live Chat</h4>
+<div class="bg-white shadow rounded-xl p-6 mb-10">
+  <h4 class="text-lg font-semibold mb-4">📨 Live Chat</h4>
 
-  <table class="table table-striped table-hover">
-    <thead class="table-dark">
-      <tr>
-        <th>Name</th>
-        <th>Messages</th>
-        <th>Reply</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="chat-table-body">
-      {% for conv_id, group in messages | groupby('conversation_id') %}
-      <tr>
-        <!-- ✅ Customer Name -->
-        <td class="fw-semibold">{{ group[0].customer_name }}</td>
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm text-left text-gray-700">
+      <thead class="bg-gray-800 text-white">
+        <tr>
+          <th class="px-4 py-2">Name</th>
+          <th class="px-4 py-2">Messages</th>
+          <th class="px-4 py-2">Reply</th>
+          <th class="px-4 py-2">Action</th>
+        </tr>
+      </thead>
+      <tbody id="chat-table-body" class="bg-white divide-y divide-gray-200">
+        {% for conv_id, group in messages | groupby('conversation_id') %}
+        <tr>
+          <!-- ✅ Customer Name -->
+          <td class="px-4 py-3 font-medium">{{ group[0].customer_name }}</td>
 
-        <!-- ✅ All Messages -->
-        <td style="width: 40%;">
-          <div id="messages-conv-{{ conv_id }}"
-               style="max-height: 200px; overflow-y: auto; padding: 5px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
-            {% for msg in group %}
-              <div class="mb-1">
+          <!-- ✅ All Messages -->
+          <td class="px-4 py-3 w-96">
+            <div id="messages-conv-{{ conv_id }}"
+                 class="max-h-52 overflow-y-auto p-2 border rounded bg-gray-50 text-sm space-y-1">
+              {% for msg in group %}
+              <div>
                 <b>{{ 'Admin' if msg.is_admin else msg.customer_name }}:</b>
                 <span>{{ msg.message }}</span>
               </div>
-            {% endfor %}
-          </div>
-        </td>
-
-        <!-- ✅ Reply Input -->
-        <td style="width: 30%;">
-          <form class="reply-form mb-1" data-conversation="{{ conv_id }}">
-            <div class="input-group input-group-sm">
-              <input type="text" name="reply" class="form-control reply-input"
-                     placeholder="Type reply...">
-              <button type="submit" class="btn btn-dark">Send</button>
+              {% endfor %}
             </div>
-          </form>
-        </td>
+          </td>
 
-        <!-- ✅ Close Chat Button -->
-        <td>
-          <form method="POST" action="{{ url_for('close_chat') }}">
-            <input type="hidden" name="conversation_id" value="{{ conv_id }}">
-            <button type="submit" class="btn btn-sm btn-danger">Close</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+          <!-- ✅ Reply Input -->
+          <td class="px-4 py-3 w-72">
+            <form class="reply-form space-y-2" data-conversation="{{ conv_id }}">
+              <div class="flex items-center gap-2">
+                <input type="text" name="reply" placeholder="Type reply..."
+                       class="reply-input flex-1 px-3 py-1.5 border rounded text-sm focus:outline-none focus:ring focus:border-blue-300">
+                <button type="submit"
+                        class="bg-gray-800 text-white text-sm px-3 py-1.5 rounded hover:bg-gray-700">
+                  Send
+                </button>
+              </div>
+            </form>
+          </td>
+
+          <!-- ✅ Close Chat -->
+          <td class="px-4 py-3">
+            <form method="POST" action="{{ url_for('close_chat') }}">
+              <input type="hidden" name="conversation_id" value="{{ conv_id }}">
+              <button type="submit"
+                      class="bg-red-600 text-white text-xs px-3 py-1.5 rounded hover:bg-red-700">
+                Close
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <script>
@@ -129,12 +129,11 @@
       const input = form.querySelector('.reply-input');
       const conversationId = form.dataset.conversation;
 
-      // Keep any cached input value
       if (!(conversationId in inputValues)) inputValues[conversationId] = '';
       input.value = inputValues[conversationId];
 
       input.addEventListener('input', () => {
-        inputValues[conversationId] = input.value;  // Preserve on input
+        inputValues[conversationId] = input.value;
       });
 
       form.onsubmit = function (e) {
@@ -145,16 +144,13 @@
         fetch('/admin/reply', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            reply: reply,
-            conversation_id: conversationId
-          })
+          body: JSON.stringify({ reply, conversation_id: conversationId })
         })
         .then(res => {
           if (res.ok) {
             input.value = '';
             inputValues[conversationId] = '';
-            loadMessages(); // show immediately
+            loadMessages();
           } else {
             alert('Failed to send reply.');
           }
@@ -178,7 +174,7 @@
           const msgBox = document.getElementById('messages-conv-' + conv.conversation_id);
           if (msgBox) {
             msgBox.innerHTML = messagesHtml;
-            msgBox.scrollTop = msgBox.scrollHeight; // ✅ auto-scroll
+            msgBox.scrollTop = msgBox.scrollHeight;
           }
         });
       })
@@ -186,139 +182,76 @@
   }
 
   setupReplyForms();
-  setInterval(loadMessages, 4000);  // Always live — no flicker!
+  setInterval(loadMessages, 4000);
 </script>
 
-  <!-- ✅ Add New Product -->
-  <div class="card p-4 mb-5 shadow rounded-3">
-    <h4 class="mb-3">Add New Product</h4>
-    <form method="POST" enctype="multipart/form-data" action="{{ url_for('add_product') }}">
-      <div class="mb-3">
-        <label class="form-label">Name</label>
-        <input type="text" name="name" class="form-control" placeholder="Enter product name" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Description</label>
-        <textarea name="description" class="form-control" placeholder="Enter product description" required></textarea>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Price (PKR)</label>
-        <input type="number" step="0.01" name="price" class="form-control" placeholder="e.g. 2500.00" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Category</label>
-        <select name="category_id" class="form-select" required>
-          <option value="">-- Select Category --</option>
-          {% for cat in categories %}
-            <option value="{{ cat.id }}">{{ cat.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Product Image</label>
-        <input type="file" name="image" class="form-control" required>
-      </div>
-      <button type="submit" class="btn btn-success">Add Product</button>
-    </form>
-  </div>
-
-  <!-- ✅ Product List -->
-  <h4 class="mb-3">All Products</h4>
-  <div class="table-responsive mb-5">
-    <table class="table table-bordered table-striped align-middle">
-      <thead class="table-dark">
-        <tr>
-          <th>ID</th>
-          <th>Name</th>
-          <th>Price</th>
-          <th>Image</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for product in products %}
-        <tr>
-          <td>{{ product.id }}</td>
-          <td>{{ product.name }}</td>
-          <td>PKR {{ '%.2f'|format(product.price) }}</td>
-          <td>
-            <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}"
-                 alt="{{ product.name }}"
-                 width="60" class="rounded shadow-sm">
-          </td>
-          <td>
-            <a href="{{ url_for('delete_product', product_id=product.id) }}"
-               class="btn btn-sm btn-danger"
-               onclick="return confirm('Are you sure you want to delete this product?');">
-              Delete
-            </a>
-          </td>
-        </tr>
+<!-- ✅ Add New Product -->
+<div class="bg-white p-6 rounded-xl shadow mb-10">
+  <h4 class="text-lg font-semibold mb-4">➕ Add New Product</h4>
+  <form method="POST" enctype="multipart/form-data" action="{{ url_for('add_product') }}" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium mb-1">Name</label>
+      <input type="text" name="name" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="Enter product name" required>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Description</label>
+      <textarea name="description" rows="3" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="Enter product description" required></textarea>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Price (PKR)</label>
+      <input type="number" step="0.01" name="price" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="e.g. 2500.00" required>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Category</label>
+      <select name="category_id" class="w-full border border-gray-300 rounded px-3 py-2" required>
+        <option value="">-- Select Category --</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}">{{ cat.name }}</option>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-<!-- ✅ Coupon Management + View + Delete -->
-<div class="card p-4 mb-5 shadow rounded-3">
-  <h4 class="mb-3">Add Coupon</h4>
-  <form method="POST" action="{{ url_for('add_coupon') }}">
-    <div class="mb-3">
-      <label class="form-label">Coupon Code</label>
-      <input type="text" name="code" class="form-control" placeholder="e.g. SUMMER20" required>
-    </div>
-
-    <!-- ✅ Discount field -->
-    <div class="mb-3" id="discount-group">
-      <label class="form-label">Discount</label>
-      <input type="number" step="0.01" name="discount" class="form-control" placeholder="e.g. 20 for 20%">
-    </div>
-
-    <!-- ✅ Coupon type -->
-    <div class="mb-3">
-      <label class="form-label">Type</label>
-      <select name="type" class="form-select" id="coupon-type" required>
-        <option value="percentage">Percentage</option>
-        <option value="fixed">Fixed Amount</option>
-        <option value="free_delivery">Free Delivery</option>
       </select>
     </div>
-
-    <!-- ✅ Optional description -->
-    <div class="mb-3">
-      <label class="form-label">Description (optional)</label>
-      <textarea name="description" class="form-control"></textarea>
+    <div>
+      <label class="block text-sm font-medium mb-1">Product Image</label>
+      <input type="file" name="image" class="w-full border border-gray-300 rounded px-3 py-2 bg-white" required>
     </div>
-
-    <button type="submit" class="btn btn-warning">Add Coupon</button>
+    <div>
+      <button type="submit" class="bg-green-600 text-white px-5 py-2 rounded hover:bg-green-700 transition">
+        Add Product
+      </button>
+    </div>
   </form>
+</div>
 
-  <!-- ✅ Show all coupons -->
-  <h4 class="mt-5 mb-3">All Coupons</h4>
-  <table class="table table-bordered">
-    <thead>
+<!-- ✅ Product List -->
+<h4 class="text-lg font-semibold mb-4">📦 All Products</h4>
+<div class="overflow-x-auto bg-white rounded-xl shadow mb-10">
+  <table class="min-w-full table-auto text-sm">
+    <thead class="bg-gray-800 text-white">
       <tr>
-        <th>#</th>
-        <th>Code</th>
-        <th>Discount</th>
-        <th>Type</th>
-        <th>Used</th>
-        <th>Actions</th>
+        <th class="px-4 py-2">ID</th>
+        <th class="px-4 py-2">Name</th>
+        <th class="px-4 py-2">Price</th>
+        <th class="px-4 py-2">Image</th>
+        <th class="px-4 py-2">Actions</th>
       </tr>
     </thead>
-    <tbody>
-      {% for coupon in coupons %}
-      <tr>
-        <td>{{ loop.index }}</td>
-        <td>{{ coupon.code }}</td>
-        <td>{{ coupon.discount }}</td>
-        <td>{{ coupon.type }}</td>
-        <td>{{ coupon.used }}</td>
-        <td>
-          <form method="POST" action="{{ url_for('delete_coupon', coupon_id=coupon.id) }}"
-                onsubmit="return confirm('Are you sure you want to delete this coupon?');">
-            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-          </form>
+    <tbody class="divide-y divide-gray-200">
+      {% for product in products %}
+      <tr class="text-gray-700">
+        <td class="px-4 py-3">{{ product.id }}</td>
+        <td class="px-4 py-3">{{ product.name }}</td>
+        <td class="px-4 py-3">PKR {{ '%.2f'|format(product.price) }}</td>
+        <td class="px-4 py-3">
+          <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}"
+               alt="{{ product.name }}"
+               class="w-16 h-auto rounded shadow">
+        </td>
+        <td class="px-4 py-3">
+          <a href="{{ url_for('delete_product', product_id=product.id) }}"
+             onclick="return confirm('Are you sure you want to delete this product?');"
+             class="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700">
+            Delete
+          </a>
         </td>
       </tr>
       {% endfor %}
@@ -326,7 +259,74 @@
   </table>
 </div>
 
-<!-- ✅ JS to auto-hide Discount field if Free Delivery -->
+<!-- ✅ Coupon Management -->
+<div class="bg-white p-6 rounded-xl shadow mb-10">
+  <h4 class="text-lg font-semibold mb-4">🎟️ Add Coupon</h4>
+  <form method="POST" action="{{ url_for('add_coupon') }}" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium mb-1">Coupon Code</label>
+      <input type="text" name="code" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="e.g. SUMMER20" required>
+    </div>
+    <div id="discount-group">
+      <label class="block text-sm font-medium mb-1">Discount</label>
+      <input type="number" step="0.01" name="discount" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="e.g. 20 for 20%">
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Type</label>
+      <select name="type" id="coupon-type" class="w-full border border-gray-300 rounded px-3 py-2" required>
+        <option value="percentage">Percentage</option>
+        <option value="fixed">Fixed Amount</option>
+        <option value="free_delivery">Free Delivery</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Description (optional)</label>
+      <textarea name="description" class="w-full border border-gray-300 rounded px-3 py-2"></textarea>
+    </div>
+    <button type="submit" class="bg-yellow-500 text-white px-5 py-2 rounded hover:bg-yellow-600 transition">
+      Add Coupon
+    </button>
+  </form>
+
+  <!-- ✅ All Coupons -->
+  <h4 class="text-lg font-semibold mt-10 mb-4">📋 All Coupons</h4>
+  <div class="overflow-x-auto">
+    <table class="min-w-full table-auto text-sm bg-white border border-gray-200 rounded-xl">
+      <thead class="bg-gray-800 text-white">
+        <tr>
+          <th class="px-4 py-2">#</th>
+          <th class="px-4 py-2">Code</th>
+          <th class="px-4 py-2">Discount</th>
+          <th class="px-4 py-2">Type</th>
+          <th class="px-4 py-2">Used</th>
+          <th class="px-4 py-2">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for coupon in coupons %}
+        <tr>
+          <td class="px-4 py-3">{{ loop.index }}</td>
+          <td class="px-4 py-3">{{ coupon.code }}</td>
+          <td class="px-4 py-3">{{ coupon.discount }}</td>
+          <td class="px-4 py-3">{{ coupon.type }}</td>
+          <td class="px-4 py-3">{{ coupon.used }}</td>
+          <td class="px-4 py-3">
+            <form method="POST" action="{{ url_for('delete_coupon', coupon_id=coupon.id) }}"
+                  onsubmit="return confirm('Are you sure you want to delete this coupon?');">
+              <button type="submit"
+                      class="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700">
+                Delete
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ✅ Auto-hide Discount Field (if Free Delivery) -->
 <script>
   const couponType = document.getElementById('coupon-type');
   const discountGroup = document.getElementById('discount-group');
@@ -334,201 +334,221 @@
   function toggleDiscountField() {
     if (couponType.value === 'free_delivery') {
       discountGroup.style.display = 'none';
-      discountGroup.querySelector('input').value = 0; // auto-set discount to 0
+      discountGroup.querySelector('input').value = 0;
     } else {
       discountGroup.style.display = 'block';
     }
   }
 
   couponType.addEventListener('change', toggleDiscountField);
-  // Initialize on page load too
   toggleDiscountField();
 </script>
 
-  <!-- ✅ Spin Wheel Feature Toggle -->
-  <div class="card p-4 mb-5 shadow rounded-3">
-    <h4 class="mb-3">Spin Wheel Feature</h4>
-    <form method="POST" action="{{ url_for('toggle_spin_wheel') }}">
-      <div class="form-check form-switch">
-        <input class="form-check-input" type="checkbox" id="spinSwitch" name="enabled"
-               {% if spin_enabled %}checked{% endif %}>
-        <label class="form-check-label" for="spinSwitch">
-          Enable Spin Wheel Discount for Customers
-        </label>
-      </div>
-      <button type="submit" class="btn btn-dark mt-3">
-        {% if spin_enabled %}Disable{% else %}Enable{% endif %} Spin Wheel
-      </button>
-    </form>
-    {% if spin_enabled %}
-      <p class="text-success mt-2 fw-semibold">Spin Wheel is currently <strong>Enabled</strong>.</p>
-    {% else %}
-      <p class="text-danger mt-2 fw-semibold">Spin Wheel is currently <strong>Disabled</strong>.</p>
-    {% endif %}
-  </div>
-
-  <!-- ✅ SPIN HISTORY SECTION -->
-<h3>🎡 Spin Wheel History</h3>
-<table border="1" cellpadding="8">
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>Phone Number</th>
-      <th>Coupon Code</th>
-      <th>Spun At</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for spin in spins %}
-    <tr>
-      <td>{{ loop.index }}</td>
-      <td>{{ spin['customer_phone'] }}</td>
-      <td>{{ spin['coupon_code'] }}</td>
-      <td>{{ spin['created_at'] }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-  <!-- ✅ Delivery Fee -->
-  <div class="card p-4 mb-5 shadow rounded-3">
-    <h4 class="mb-3">Set Delivery Fee</h4>
-    <form method="POST" action="{{ url_for('update_delivery_fee') }}">
-      <div class="mb-3">
-        <label class="form-label">Delivery Fee (PKR)</label>
-        <input type="number" step="0.01" name="delivery_fee" class="form-control"
-               value="{{ delivery_fee if delivery_fee is defined else '' }}"
-               placeholder="e.g. 250">
-      </div>
-      <button type="submit" class="btn btn-dark">Update Delivery Fee</button>
-    </form>
-    {% if delivery_fee %}
-      <p class="mt-2 text-success fw-semibold">Current Delivery Fee: PKR {{ delivery_fee }}</p>
-    {% endif %}
-  </div>
-
-  <!-- ✅ Hero Banner with Delete -->
-  <div class="card p-4 mb-5 shadow rounded-3">
-    <h4 class="mb-3">Upload Hero Banner</h4>
-    <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_banner') }}">
-      <div class="mb-3">
-        <label class="form-label">Banner Image</label>
-        <input type="file" name="banner" class="form-control">
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Banner Video (MP4)</label>
-        <input type="file" name="banner_video" class="form-control">
-      </div>
-      <button type="submit" class="btn btn-primary">Upload Banner</button>
-    </form>
-    {% if banner and banner.filename %}
-      <p class="mt-3 fw-semibold">Current Banner Image:</p>
-      <img src="{{ url_for('static', filename='uploads/banners/' ~ banner.filename) }}" class="img-fluid rounded shadow mb-2">
-      <form method="POST" action="{{ url_for('delete_banner', banner_id=banner.id) }}"
-            onsubmit="return confirm('Delete this banner?');">
-        <button type="submit" class="btn btn-danger btn-sm">Delete Banner</button>
-      </form>
-    {% endif %}
-    {% if banner and banner.video %}
-      <p class="mt-3 fw-semibold">Current Banner Video:</p>
-      <video src="{{ url_for('static', filename='uploads/banners/' ~ banner.video) }}"
-             autoplay muted loop controls class="img-fluid rounded shadow mb-2"></video>
-      <form method="POST" action="{{ url_for('delete_banner', banner_id=banner.id) }}"
-            onsubmit="return confirm('Delete this banner video?');">
-        <button type="submit" class="btn btn-danger btn-sm">Delete Video</button>
-      </form>
-    {% endif %}
-  </div>
-
-
-<!-- ✅ Logo with Delete -->
-<div class="card p-4 mb-5 shadow rounded-3">
-  <h4 class="mb-3">Upload Shop Logo</h4>
-  <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_logo') }}">
-    <div class="mb-3">
-      <label class="form-label">Logo Image</label>
-      <input type="file" name="logo" class="form-control" required>
-    </div>
-    <button type="submit" class="btn btn-info">Upload Logo</button>
+<!-- ✅ Spin Wheel Feature Toggle -->
+<div class="bg-white p-6 rounded-xl shadow mb-10">
+  <h4 class="text-lg font-semibold mb-4">🎯 Spin Wheel Feature</h4>
+  <form method="POST" action="{{ url_for('toggle_spin_wheel') }}">
+    <label class="flex items-center gap-3 mb-4 cursor-pointer">
+      <input type="checkbox" name="enabled" id="spinSwitch"
+             class="toggle toggle-lg" {% if spin_enabled %}checked{% endif %}>
+      <span class="text-sm">Enable Spin Wheel Discount for Customers</span>
+    </label>
+    <button type="submit"
+            class="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2 rounded transition">
+      {% if spin_enabled %}Disable{% else %}Enable{% endif %} Spin Wheel
+    </button>
   </form>
-
-  {% if logo %}
-    <div class="mt-3">
-      <p class="fw-semibold">Current Logo:</p>
-      <img src="{{ url_for('static', filename='uploads/logos/' ~ logo.filename) }}"
-           alt="Shop Logo"
-           class="img-fluid rounded shadow mb-2"
-           style="max-height: 100px;">
-      <form method="POST"
-            action="{{ url_for('delete_logo', logo_id=logo.id) }}"
-            onsubmit="return confirm('Are you sure you want to delete this logo?');">
-        <button type="submit" class="btn btn-danger btn-sm">Delete Logo</button>
-      </form>
-    </div>
+  {% if spin_enabled %}
+    <p class="text-green-600 mt-3 font-semibold">Spin Wheel is currently <strong>Enabled</strong>.</p>
   {% else %}
-    <p class="text-muted mt-2">No logo uploaded yet.</p>
+    <p class="text-red-600 mt-3 font-semibold">Spin Wheel is currently <strong>Disabled</strong>.</p>
   {% endif %}
 </div>
 
-  <!-- ✅ Know Your Perfume with Delete -->
-  <div class="card p-4 mb-5 shadow rounded-3">
-    <h4 class="mb-3">Upload "Know Your Perfume" Guide Image</h4>
-    <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_know_your_perfume') }}">
-      <div class="mb-3">
-        <label class="form-label">Upload Image</label>
-        <input type="file" name="know_your_perfume_image" class="form-control" required>
-      </div>
-      <button type="submit" class="btn btn-primary">Upload Image</button>
-    </form>
-    {% if know_your_perfume %}
-      <p class="mt-3 fw-semibold">Current Guide Image:</p>
+<!-- ✅ Spin Wheel History -->
+<div class="bg-white p-6 rounded-xl shadow mb-10">
+  <h4 class="text-lg font-semibold mb-4">🎡 Spin Wheel History</h4>
+  <div class="overflow-x-auto">
+    <table class="min-w-full table-auto border border-gray-200 text-sm">
+      <thead class="bg-gray-800 text-white">
+        <tr>
+          <th class="px-4 py-2">#</th>
+          <th class="px-4 py-2">Phone Number</th>
+          <th class="px-4 py-2">Coupon Code</th>
+          <th class="px-4 py-2">Spun At</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for spin in spins %}
+        <tr>
+          <td class="px-4 py-3">{{ loop.index }}</td>
+          <td class="px-4 py-3">{{ spin['customer_phone'] }}</td>
+          <td class="px-4 py-3">{{ spin['coupon_code'] }}</td>
+          <td class="px-4 py-3">{{ spin['created_at'] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ✅ Delivery Fee -->
+<div class="bg-white p-6 rounded-xl shadow mb-10">
+  <h4 class="text-lg font-semibold mb-4">🚚 Set Delivery Fee</h4>
+  <form method="POST" action="{{ url_for('update_delivery_fee') }}" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium mb-1">Delivery Fee (PKR)</label>
+      <input type="number" step="0.01" name="delivery_fee"
+             class="w-full border border-gray-300 rounded px-3 py-2"
+             value="{{ delivery_fee if delivery_fee is defined else '' }}"
+             placeholder="e.g. 250">
+    </div>
+    <button type="submit" class="bg-gray-800 text-white px-6 py-2 rounded hover:bg-gray-900 transition">
+      Update Delivery Fee
+    </button>
+  </form>
+  {% if delivery_fee %}
+    <p class="mt-3 text-green-600 font-medium">Current Delivery Fee: PKR {{ delivery_fee }}</p>
+  {% endif %}
+</div>
+
+<!-- ✅ Hero Banner Upload -->
+<div class="bg-white p-6 rounded-xl shadow mb-10">
+  <h4 class="text-lg font-semibold mb-4">🖼️ Upload Hero Banner</h4>
+  <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_banner') }}" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium">Banner Image</label>
+      <input type="file" name="banner" class="w-full border border-gray-300 rounded px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-sm font-medium">Banner Video (MP4)</label>
+      <input type="file" name="banner_video" class="w-full border border-gray-300 rounded px-3 py-2">
+    </div>
+    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+      Upload Banner
+    </button>
+  </form>
+
+  {% if banner and banner.filename %}
+    <div class="mt-5">
+      <p class="font-semibold">Current Banner Image:</p>
+      <img src="{{ url_for('static', filename='uploads/banners/' ~ banner.filename) }}"
+           class="rounded-lg shadow mb-2 max-w-full h-auto">
+      <form method="POST" action="{{ url_for('delete_banner', banner_id=banner.id) }}"
+            onsubmit="return confirm('Delete this banner?');">
+        <button type="submit" class="bg-red-600 text-white text-sm px-4 py-1 rounded">Delete Banner</button>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if banner and banner.video %}
+    <div class="mt-5">
+      <p class="font-semibold">Current Banner Video:</p>
+      <video autoplay muted loop controls class="rounded-lg shadow mb-2 w-full max-w-md">
+        <source src="{{ url_for('static', filename='uploads/banners/' ~ banner.video) }}" type="video/mp4">
+      </video>
+      <form method="POST" action="{{ url_for('delete_banner', banner_id=banner.id) }}"
+            onsubmit="return confirm('Delete this banner video?');">
+        <button type="submit" class="bg-red-600 text-white text-sm px-4 py-1 rounded">Delete Video</button>
+      </form>
+    </div>
+  {% endif %}
+</div>
+
+<!-- ✅ Logo Upload -->
+<div class="bg-white p-6 rounded-xl shadow mb-10">
+  <h4 class="text-lg font-semibold mb-4">🪪 Upload Shop Logo</h4>
+  <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_logo') }}" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium">Logo Image</label>
+      <input type="file" name="logo" class="w-full border border-gray-300 rounded px-3 py-2" required>
+    </div>
+    <button type="submit" class="bg-cyan-600 text-white px-6 py-2 rounded hover:bg-cyan-700">
+      Upload Logo
+    </button>
+  </form>
+
+  {% if logo %}
+    <div class="mt-5">
+      <p class="font-semibold">Current Logo:</p>
+      <img src="{{ url_for('static', filename='uploads/logos/' ~ logo.filename) }}"
+           alt="Shop Logo"
+           class="h-24 rounded-lg shadow mb-2">
+      <form method="POST" action="{{ url_for('delete_logo', logo_id=logo.id) }}"
+            onsubmit="return confirm('Are you sure you want to delete this logo?');">
+        <button type="submit" class="bg-red-600 text-white text-sm px-4 py-1 rounded">Delete Logo</button>
+      </form>
+    </div>
+  {% else %}
+    <p class="text-gray-400 mt-2">No logo uploaded yet.</p>
+  {% endif %}
+</div>
+
+<!-- ✅ Know Your Perfume -->
+<div class="bg-white p-6 rounded-xl shadow mb-10">
+  <h4 class="text-lg font-semibold mb-4">📘 Upload "Know Your Perfume" Guide</h4>
+  <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_know_your_perfume') }}" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium">Guide Image</label>
+      <input type="file" name="know_your_perfume_image" class="w-full border border-gray-300 rounded px-3 py-2" required>
+    </div>
+    <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700">
+      Upload Image
+    </button>
+  </form>
+
+  {% if know_your_perfume %}
+    <div class="mt-5">
+      <p class="font-semibold">Current Guide Image:</p>
       <img src="{{ url_for('static', filename='uploads/' ~ know_your_perfume.filename) }}"
-           class="img-fluid rounded shadow mb-2">
+           class="rounded-lg shadow mb-2 max-w-full h-auto">
       <form method="POST" action="{{ url_for('delete_kyp', kyp_id=know_your_perfume.id) }}"
             onsubmit="return confirm('Delete this guide image?');">
-        <button type="submit" class="btn btn-danger btn-sm">Delete Guide</button>
+        <button type="submit" class="bg-red-600 text-white text-sm px-4 py-1 rounded">Delete Guide</button>
       </form>
-    {% endif %}
-  </div>
+    </div>
+  {% endif %}
+</div>
 
-  <!-- ✅ Top Banner Announcement -->
-  <div class="card p-4 mb-4 shadow rounded-3">
-    <h4 class="mb-3">Update Top Banner Text</h4>
-    <form method="POST" action="{{ url_for('update_top_banner') }}">
-      <div class="mb-3">
-        <label class="form-label">Banner Text</label>
-        <textarea name="banner_text" rows="2" class="form-control" required>{{ top_banner }}</textarea>
-      </div>
-      <button type="submit" class="btn btn-primary">Update Banner</button>
-    </form>
-  </div>
+<!-- ✅ Top Banner Text -->
+<div class="bg-white p-6 rounded-xl shadow mb-10">
+  <h4 class="text-lg font-semibold mb-4">📢 Update Top Banner Text</h4>
+  <form method="POST" action="{{ url_for('update_top_banner') }}" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium">Banner Text</label>
+      <textarea name="banner_text" rows="2"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                required>{{ top_banner }}</textarea>
+    </div>
+    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+      Update Banner
+    </button>
+  </form>
+</div>
 
-  <!-- ✅ Background with Delete -->
-  <div class="card p-4 mb-4 shadow rounded-3">
-    <h4 class="mb-3">Upload Background Theme</h4>
-    <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_background') }}">
-      <div class="mb-3">
-        <label class="form-label">Background Image</label>
-        <input type="file" name="background" class="form-control" required>
-      </div>
-      <button type="submit" class="btn btn-secondary">Upload Background</button>
-    </form>
-    {% if background %}
-      <p class="mt-3 fw-semibold">Current Background:</p>
+<!-- ✅ Background Image -->
+<div class="bg-white p-6 rounded-xl shadow mb-10">
+  <h4 class="text-lg font-semibold mb-4">🌄 Upload Background Theme</h4>
+  <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_background') }}" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium">Background Image</label>
+      <input type="file" name="background" class="w-full border border-gray-300 rounded px-3 py-2" required>
+    </div>
+    <button type="submit" class="bg-gray-700 text-white px-6 py-2 rounded hover:bg-gray-800">
+      Upload Background
+    </button>
+  </form>
+
+  {% if background %}
+    <div class="mt-5">
+      <p class="font-semibold">Current Background:</p>
       <img src="{{ url_for('static', filename='uploads/backgrounds/' ~ background.filename) }}"
-           class="img-fluid rounded shadow mb-2">
+           class="rounded-lg shadow mb-2 max-w-full h-auto">
       <form method="POST" action="{{ url_for('delete_background', background_id=background.id) }}"
             onsubmit="return confirm('Delete this background?');">
-        <button type="submit" class="btn btn-danger btn-sm">Delete Background</button>
+        <button type="submit" class="bg-red-600 text-white text-sm px-4 py-1 rounded">Delete Background</button>
       </form>
-    {% endif %}
-  </div>
-
-<!-- ✅ Optional: Card hover effect -->
-<style>
-  .card:hover {
-    transform: translateY(-3px);
-    transition: transform 0.3s ease;
-  }
-</style>
+    </div>
+  {% endif %}
+</div>
 {% endblock %}

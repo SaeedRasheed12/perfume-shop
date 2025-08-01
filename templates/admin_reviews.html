@@ -1,41 +1,52 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<div class="container py-5">
-  <h2>📝 Customer Reviews</h2>
+
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <h2 class="text-2xl sm:text-3xl font-bold mb-6 text-center">📝 Customer Reviews</h2>
+
   {% if reviews %}
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th>Product</th>
-        <th>Name</th>
-        <th>Rating</th>
-        <th>Comment</th>
-        <th>Posted On</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for review in reviews %}
-      <tr>
-        <td>{{ review.product_name }}</td>
-        <td>{{ review.customer_name }}</td>
-        <td>{{ review.rating }}/5</td>
-        <td>{{ review.comment }}</td>
-        <td>{{ review.created_at }}</td>
-        <td>
-          <form method="POST" action="{{ url_for('delete_review', review_id=review.id) }}">
-            <button class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
-              Delete
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <div class="overflow-x-auto bg-white shadow-md rounded-xl border border-gray-200">
+      <table class="min-w-full text-sm text-gray-700">
+        <thead class="bg-gray-100 text-xs uppercase tracking-wider">
+          <tr>
+            <th class="px-6 py-3 text-left">Product</th>
+            <th class="px-6 py-3 text-left">Name</th>
+            <th class="px-6 py-3 text-left">Rating</th>
+            <th class="px-6 py-3 text-left">Comment</th>
+            <th class="px-6 py-3 text-left">Posted On</th>
+            <th class="px-6 py-3 text-left">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for review in reviews %}
+          <tr class="hover:bg-gray-50 transition">
+            <td class="px-6 py-4 whitespace-nowrap font-medium">{{ review.product_name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap">{{ review.customer_name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="text-yellow-500 font-semibold">{{ review.rating }}/5</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap max-w-xs truncate" title="{{ review.comment }}">
+              {{ review.comment }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">{{ review.created_at }}</td>
+            <td class="px-6 py-4">
+              <form method="POST" action="{{ url_for('delete_review', review_id=review.id) }}">
+                <button onclick="return confirm('Are you sure?')"
+                        class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded-md">
+                  Delete
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% else %}
-  <p>No reviews found.</p>
+    <div class="text-center bg-yellow-100 text-yellow-800 py-4 px-6 rounded-lg shadow mt-6">
+      No reviews found.
+    </div>
   {% endif %}
 </div>
+
 {% endblock %}
